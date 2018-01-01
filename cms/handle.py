@@ -100,8 +100,8 @@ class LoginManager(object):
         return self.wckey
     def check(self, sign, checktime):
         if time.time()-int(checktime) > 30:
-            print ('expire time')
             return False
+            
         to_check_str = str(checktime) + str(self.TOKEN)
         to_check_str = to_check_str.encode('utf-8')
 

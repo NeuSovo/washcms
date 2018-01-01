@@ -27,6 +27,7 @@ class User(models.Model):
 class Profile(models.Model):
     wk = models.OneToOneField(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=150, default='no register')
+    
     # pass
 
 
@@ -39,5 +40,9 @@ class Session(models.Model):
 
 class ClassName(object):
     """docstring for ClassName"""
+    pass
 
-
+class CodeRecord(models.Model):
+    code_key = models.IntegerField(primary_key=True)
+    code_name = models.CharField(max_length=100,default='not defined')
+    code_count = models.IntegerField(default=0)

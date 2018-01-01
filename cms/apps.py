@@ -1,5 +1,5 @@
 from django.apps import AppConfig
-
+from cms.models import CodeRecord
 
 class CmsConfig(AppConfig):
     name = 'cms'
@@ -14,8 +14,9 @@ class APIServerErrorCode(object):
     ALERADY_REG           = 1001
     FLUSH_SESSION_SUCCESS = 1002
     SESSION_EXPIRED       = 1003
-    LOGIN_SUCCESS         = 1004
-    SESSION_NOT_WORK      = 1005
+    SESSION_NOT_WORK      = 1004
+    CHECK_USER_FAILED     = 1005
+    LOGIN_SUCCESS         = 1006
 
     #order
 
@@ -25,6 +26,13 @@ class APIServerErrorCode(object):
     @staticmethod
     def getMessage(errorCode):
         if errorCode in CodeMessage:
+            try:
+                code = CodeRecord.objects.get(code_key=errorCode)
+                code.code_count += 1
+                code.save()
+            except Exception as e:
+                pass
+
             return CodeMessage[errorCode]
         else:
             return  "error code not defined"
@@ -36,6 +44,7 @@ CodeMessage = {
     APIServerErrorCode.ALERADY_REG           :'User Alerady Register',
     APIServerErrorCode.FLUSH_SESSION_SUCCESS :'Flush Session Success',
     APIServerErrorCode.SESSION_EXPIRED       :'Session Expired',
+    APIServerErrorCode.SESSION_NOT_WORK      :'Session Not Work',
+    APIServerErrorCode.CHECK_USER_FAILED     :'Verify User Failed',
     APIServerErrorCode.LOGIN_SUCCESS         :'Login Success',
-    APIServerErrorCode.SESSION_NOT_WORK      :'Session Not Work'
     }
