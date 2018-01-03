@@ -17,7 +17,7 @@ class CodeRecordAdmin(admin.ModelAdmin):
 class UserProfileAdmin(admin.StackedInline):
     model = Profile
     verbose_name = 'profile'
-    can_delete = False
+    can_delete = True
 
 
 class UserTypeFilter(admin.SimpleListFilter):
@@ -40,26 +40,27 @@ class UserTypeFilter(admin.SimpleListFilter):
         """
         if self.value():
             if int(self.value()) == 0:
-                return queryset.filter(is_admin=1)
+                return queryset.filter(user_type = 0)
             if int(self.value()) == 1:
-                return queryset.filter(is_courier=1)
+                return queryset.filter(user_type = 1)
             if int(self.value()) == 2:
-                return queryset.filter(is_customer=1)
+                return queryset.filter(user_type = 2)
             if int(self.value()) == 3:
-                return queryset.filter(is_admin=0, is_courier=0, is_customer=0)
+                return queryset.filter(user_type = 3)
 
 
 class UserAdmin(admin.ModelAdmin):
     '''
         Admin View for User
+        edit profile return default
     '''
 
     def get_user_type(self, user):
-        if user.is_admin:
+        if user.user_type == 0:
             return u'%s' % (u"管理员",)
-        elif user.is_courier:
+        elif user.user_type == 1:
             return u'%s' % (u"配送员",)
-        elif user.is_customer:
+        elif user.user_type == 2:
             return u'%s' % (u"顾客",)
         else:
             return u'%s' % (u"未注册",)
@@ -70,8 +71,12 @@ class UserAdmin(admin.ModelAdmin):
     get_user_name.short_description = u'用户名字'
     get_user_type.short_description = u'用户类型'
 
-    # get_user_type.allow_tags = True
-    # get_user_name.allow_tags = True
+    get_user_type.allow_tags = True
+    get_user_name.allow_tags = True
+
+    def get_readonly_fields(self,*args, **kwargs):
+        return ['wk']
+
     list_display = ('wk', 'get_user_type', 'get_user_name')
 
     list_filter = (UserTypeFilter,)

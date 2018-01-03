@@ -20,6 +20,6 @@ urlpatterns = [
     path('',index),
     path('admin/', admin.site.urls),
     path('auth/reg',register_view),
-    path('auth/rreg',re_register_view),
+    # path('auth/rreg',re_register_view),# Drop
     path('auth/login',login_view)
 ]

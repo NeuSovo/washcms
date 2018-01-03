@@ -10,13 +10,14 @@ from datetime import datetime, timedelta
 
 from .models import *
 from .apps import APIServerErrorCode as ASEC
-DEBUG = settings.DEBUG
 app = logging.getLogger('app.custom')
+
 
 class WechatSdk(object):
     __Appid = 'wx5c7d55175f3872b7'
     __SECRET = '18e18b264801eb53c9fe7634504f2f15'
-    """docs
+    """
+    WechatSdk
         nothing
     """
 
@@ -35,14 +36,20 @@ class WechatSdk(object):
             'js_code': self.code,
             'grant_type': 'authorization_code'
         }
-        if DEBUG:
+
+        if settings.DEBUG:
             info = {
                 'openid': self.code,
                 'session_key': 'SESSIONKEY',
             }
         else:
-            data = s.get(
-                'https://api.weixin.qq.com/sns/jscode2session', params=params)
+            try:
+                data = s.get(
+                    'https://api.weixin.qq.com/sns/jscode2session', params=params)
+            except Exception as e:
+                app.error(str(e) + '\tcode:' + str(self.code))
+                return False
+                
             info = data.json()
 
         if 'openid' not in info:
@@ -57,8 +64,7 @@ class WechatSdk(object):
         have_user = User.objects.filter(wk=self.openid)
         if len(have_user) != 0:
             # 已注册过
-            return {'code': ASEC.ALERADY_REG,
-                    'message': ASEC.getMessage(ASEC.ALERADY_REG)}
+            return self.flush_session()
 
         sess = self.gen_hash()
 
@@ -69,6 +75,8 @@ class WechatSdk(object):
 
         user = User(wk=self.openid)
         user.save()
+        # 自动为用户生成Profile
+        Profile(wk=user).save()
 
         # 注册成功，分配cookie
         return {'sess': sess,
@@ -98,10 +106,11 @@ class LoginManager(object):
 
     def __str__(self):
         return self.wckey
+
     def check(self, sign, checktime):
-        if time.time()-int(checktime) > 30:
+        if time.time() - int(checktime) > 30:
             return False
-            
+
         to_check_str = str(checktime) + str(self.TOKEN)
         to_check_str = to_check_str.encode('utf-8')
 
@@ -110,7 +119,7 @@ class LoginManager(object):
 
         cc_str = m.hexdigest()
         del m
-        if DEBUG:
+        if settings.DEBUG:
             return True
         else:
             return cc_str == sign
@@ -119,24 +128,24 @@ class LoginManager(object):
         name = user.profile.name
         return {'name': name}
 
-    def get_type(self, user):
-        user_type = 3
-        if user.is_admin:
-            user_type = 0
-        if user.is_courier:
-            user_type = 1
-        if user.is_customer:
-            user_type = 2
+    # def get_type(self, user):
+    #     user_type = 3
+    #     if user.is_admin:
+    #         user_type = 0
+    #     if user.is_courier:
+    #         user_type = 1
+    #     if user.is_customer:
+    #         user_type = 2
 
-        return user_type
+    #     return user_type
 
     def reply(self):
         try:
             user_key = Session.objects.get(session_data=self.wckey)
         except Exception as e:
             app.error(str(e) + 'wckey:{}'.format(self.wckey))
-            return {'code':ASEC.SESSION_NOT_WORK,
-                    'message':AESC.getMessage(ASEC.SESSION_NOT_WORK)}
+            return {'code': ASEC.SESSION_NOT_WORK,
+                    'message': ASEC.getMessage(ASEC.SESSION_NOT_WORK)}
 
         if user_key.expire_date < datetime.now():
             return {'code': ASEC.SESSION_EXPIRED,
@@ -144,10 +153,9 @@ class LoginManager(object):
 
         user = User.objects.get(wk=user_key.session_key)
 
-        user_type = self.get_type(user)
         user_info = self.get_info(user)
 
         return {'code': ASEC.LOGIN_SUCCESS,
-                'type': user_type,
+                'type': user.user_type,
                 'info': user_info,
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}

@@ -5,6 +5,7 @@ from django.shortcuts import render, HttpResponse
 from .handle import WechatSdk, LoginManager
 from .apps import APIServerErrorCode as ASEC
 
+
 def parse_info(data):
     """
     parser_info:
@@ -19,7 +20,7 @@ def index(request):
     """
     view for index:
     return status_code : 203
-    no context
+    no content
     """
     response = parse_info({'code': 9999})
     response.status_code = 203
@@ -62,14 +63,14 @@ def register_view(request):
     return response
 
 
+'''Meaged with register_view
 def re_register_view(request):
     """
     view for re-register
     Accept the code from WeChat, and re-register this user on the server
     TODO:
         Merged with register_view interface
-        
-
+    
     """
     result = {}
     if 'code' not in request.GET:
@@ -94,12 +95,22 @@ def re_register_view(request):
     response['wckey'] = sess
 
     return response
+'''
 
 
 def login_view(request):
     """
     view for login
-
+    Accept User Cookies and return user info,
+    This interface must Verify sign.
+    Request parmes :
+        sign : md5 (time + Token)
+        time : nowtime and 30s effective
+    Request Headers:
+        cookies : wckey
+    Return 
+        user_type
+        user_info
     """
     result = {}
     if 'sign' and 'time' not in request.GET:
@@ -118,7 +129,6 @@ def login_view(request):
 
     wckey = request.COOKIES['wckey']
     user = LoginManager(wckey=wckey)
-
     if user.check(sign=request.GET['sign'],
                   checktime=request.GET['time']):
         result = user.reply()
@@ -131,3 +141,12 @@ def login_view(request):
         response = parse_info(result)
 
         return response
+
+
+def modify_user_view(request):
+    """
+    view for modify user infomations
+
+    """
+    pass
+
