@@ -25,5 +25,7 @@ urlpatterns = [
     path('auth/reg',register_view),
     # path('auth/rreg',re_register_view),# Drop
     path('auth/login',login_view),
-    path('boss/area',change_deliveryarea_view)
+
+    path('boss/area',change_deliveryarea_view),
+    path('boss/store',change_storeinfo_view)
 ]

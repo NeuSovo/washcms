@@ -13,6 +13,21 @@ from cms.apps import APIServerErrorCode as ASEC
 app = logging.getLogger('app.custom')
 
 
+def get_user(wckey):
+    try:
+        user_key = Session.objects.get(session_data=wckey)
+    except Exception as e:
+        app.error(str(e) + 'wckey:{}'.format(wckey))
+        return None
+
+    if user_key.expire_date < datetime.now():
+        return None
+
+    user = User.objects.get(wk=user_key.session_key)
+
+    return user
+
+
 class WechatSdk(object):
     __Appid = 'wx5c7d55175f3872b7'
     __SECRET = '18e18b264801eb53c9fe7634504f2f15'
@@ -20,6 +35,7 @@ class WechatSdk(object):
     WechatSdk
     Based on Wechat user code
     """
+
     def __init__(self, code):
         super(WechatSdk, self).__init__()
         self.code = code
@@ -54,7 +70,7 @@ class WechatSdk(object):
             except Exception as e:
                 app.error(str(e) + '\tcode:' + str(self.code))
                 return False
-                
+
             info = data.json()
 
         if 'openid' not in info:
@@ -134,7 +150,7 @@ class LoginManager(object):
         name = user.nick_name
         avatar_links = user.avatar_links
         return {'name': name,
-                'avatar_links':avatar_links}
+                'avatar_links': avatar_links}
 
     def reply(self):
         try:
@@ -157,36 +173,62 @@ class LoginManager(object):
                 'info': user_info,
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
 
+
 class AreaManager(object):
-    def __init__(self,wckey,postdata):
-        self.wckey = wckey
+    def __init__(self, postdata):
+        self.wckey = postdata['base_req']['wckey']
         self.data = postdata
 
     def add_area(self):
-        DeliveryArea(area_name=self.data['name']).save()
-        return {'message':'ok'}
+        '''
+            post name
+        '''
+        new_area = DeliveryArea(area_name=self.data['name'])
+        new_area.save()
+        print(1)
+        return {'message': 'ok'}  # ,'id':new_area.id}
 
     def del_area(self):
+        '''
+            post id
+        '''
         try:
             DeliveryArea.objects.get(id=self.data['id']).delete()
         except:
-            return {'message':'ok'}
+            return {'message': 'faild'}
 
-        return {'message':'ok'}
+        return {'message': 'ok'}
 
     def change_area(self):
+        '''
+             post id,new_name
+        '''
+        print(2)
         area = DeliveryArea.objects.get(id=self.data['id'])
         area.area_name = self.data['name']
         area.save()
-        return {'message':'ok'}
+        return {'message': 'ok'}
+
+    def all_area(self):
+        '''
+            None
+        '''
+        allarea = DeliveryArea.objects.all()
+        all_area_list = []
+        for _i in allarea:
+            all_area_list.append({'id': _i.id,
+                                  'name': _i.area_name})
+
+        return {'message': 'ok',
+                'info': all_area_list}
 
     def reply(self):
         user = get_user(self.wckey)
-        if not user:
-            return {'message':'error'}
+        if user is None:
+            return {'message': 'error'}
 
         if not user.is_admin():
-            return {'message':'faild'}
+            return {'message': 'faild'}
 
         if self.data['type'] == 'add':
             info = self.add_area()
@@ -195,21 +237,83 @@ class AreaManager(object):
         elif self.data['type'] == 'change':
             info = self.change_area()
         else:
-            return {'message':'error'}
+            info = self.all_area()
 
         return info
 
 
-def get_user(wckey):
-   try:
-       user_key = Session.objects.get(session_data=wckey)
-   except Exception as e:
-       app.error(str(e) + 'wckey:{}'.format(wckey))
-       return False
+class StoreManager(object):
+    """docstring for StoreManager"""
 
-   if user_key.expire_date < datetime.now():
-       return False
+    def __init__(self, action, postdata):
+        super(StoreManager, self).__init__()
+        self.wckey = postdata['base_req']['wckey']
+        self.action = action
+        self.data = postdata
 
-   user = User.objects.get(wk=user_key.session_key)
+    def add_store(self,user):
+        data = self.data
+        new_store = Store(store_name = data['name'],
+                          store_phone = data['phone'],
+                          store_addr = data['addr'],
+                          store_area = data['area'],
+                          store_pay_type = data['pay_type'],
+                          store_deposit = data['deposit'])
 
-   return user
+        new_store.save()
+
+        return {'message':'ok','id':new_store.store_id}
+
+    def del_store(self):
+        try:
+            Store.objects.get(store_id=self.data['id']).delete()
+        except:
+            return {'message':'faild'}
+
+        return {'message':'ok'}
+
+    def change_store(self):
+        data = self.data
+        try:
+            this_store = Store.objects.get(store_id=data['id'])
+            this_store.store_name = data['name']
+            this_store.store_phone = data['phone']
+            this_store.store_addr = data['addr']
+            this_store.store_area = data['area']
+            this_store.store_pay_type = data['pay_type']
+            this_store.store_deposit = data['deposit']
+            this_store.save()
+            return {'message':'ok'}
+        except Exception as e:
+            raise e
+            return {'message':'faild'}
+
+    def all_store(self):
+        all_store = Store.objects.all()
+        all_store_list = []
+        for store in all_store:
+            all_store_list.append({'id':store.store_id,
+                                  'name':store.store_name,
+                                  'phone':store.store_phone,
+                                  'addr':store.store_addr,
+                                  'area':store.store_area,
+                                  'pay_type':store.store_pay_type,
+                                  'deposit':store.store_deposit})
+        return {'message':'ok','info':all_store_list}
+
+    def reply(self):
+        user = get_user(self.wckey)
+        if user is None:
+            return {'message': 'error'}
+
+        if not user.is_admin():
+            return {'message': 'faild'}
+
+        if self.action == 'add':
+            return self.add_store(user)
+        elif self.action == 'change':
+            return self.change_store()
+        elif self.action == 'del':
+            return self.del_store()
+        else:
+            return self.all_store()

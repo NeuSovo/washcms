@@ -2,7 +2,7 @@
 import json
 from django.shortcuts import render, HttpResponse
 
-from cms.handle import WechatSdk, LoginManager,AreaManager
+from cms.handle import WechatSdk, LoginManager, AreaManager,StoreManager
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -142,28 +142,61 @@ def login_view(request):
 
         return response
 
+
 def change_deliveryarea_view(request):
     '''
         add
         del
         change
+        {
+        'base_req':{
+            'wckey':'',
+            }
+        }
     '''
     result = {}
-    if 'wckey' not in request.COOKIES:
+    body = json.loads(request.body)
+    # print (body)
+    if 'base_req' not in body:
         result['code'] = ASEC.ERROR_PARAME
         result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
         response = parse_info(result)
         response.status_code = 400
         return response
-    else:
-        wckey = request.COOKIES['wckey']
 
-    result = AreaManager(wckey,request.POST)
+    result = AreaManager(body)
 
-    response = parse_info(result.reply()) 
+    response = parse_info(result.reply())
 
     return response
 
 
 def change_storeinfo_view(request):
-    pass
+    result = {}
+    try:
+        body = json.loads(request.body)
+    except:
+        result['code'] = ASEC.ERROR_PARAME
+        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+        response = parse_info(result)
+        response.status_code = 400
+        return response
+
+    # print (body)
+    if 'base_req' not in body:
+        result['code'] = ASEC.ERROR_PARAME
+        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+        response = parse_info(result)
+        response.status_code = 400
+        return response
+
+    if 'action' not in request.GET:
+        action = 'all'
+    else:
+        action = request.GET['action']
+
+    result = StoreManager(action=action,postdata=body)
+
+    response = parse_info(result.reply())
+
+    return response

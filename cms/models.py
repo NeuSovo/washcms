@@ -49,7 +49,7 @@ class Store(models.Model):
         (0,'日结'),
         (1,'月结'),
         )
-    store_id = models.IntegerField(primary_key=True)
+    store_id = models.AutoField(primary_key=True)
     store_name = models.CharField(max_length=155,default=0)
     store_phone = models.IntegerField(default=0)
     store_addr = models.TextField(default=0)
