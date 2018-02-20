@@ -5,29 +5,62 @@ from django.db import models
 
 
 class User(models.Model):
-    wk = models.CharField(max_length=100, blank=True, primary_key=True)
-    is_admin = models.IntegerField(default=0)
-    is_courier = models.IntegerField(default=0)
-    is_customer = models.IntegerField(default=0)
+
+    type_level = (
+        (0, u'管理员'),
+        (1, u'配送员'),
+        (2, u'顾客'),
+        (3, u'库管'),
+        (4, u'未注册')
+    )
+    wk = models.CharField(max_length=100,unique=True)
+    user_type = models.IntegerField(
+        default=4, choices=type_level, verbose_name='用户身份')
+    nick_name = models.CharField(max_length=100, default='nick_name')
+    avatar_links = models.CharField(max_length=150, default='https://pic3.zhimg.com/aadd7b895_s.jpg')
+    reg_date = models.DateTimeField(auto_now_add=True)
 
     def all_admin(self):
-        return User.objects.all().filter(is_admin=1)
+        return User.objects.all().filter(user_type=0)
 
     def all_courier(self):
-        return User.objects.all().filter(is_courier=1)
+        return User.objects.all().filter(user_type=1)
 
     def all_customer(self):
-        return User.objects.all().filter(is_customer=1)
+        return User.objects.all().filter(user_type=2)
+
+    def is_admin(self):
+        return self.user_type == 0
+
+    def is_courier(self):
+        return self.user_type == 1
+
+    def is_customer(self):
+        return self.user_type == 2
 
     def save(self):
         super().save()
-        Profile(wk=self).save()
 
+class DeliveryArea(models.Model):
+    area_name = models.CharField(max_length=150)
 
-class Profile(models.Model):
-    wk = models.OneToOneField(User, on_delete=models.CASCADE)
-    name = models.CharField(max_length=150, default='no register')
-    
+class Store(models.Model):
+    pay_type_level = (
+        (0,'日结'),
+        (1,'月结'),
+        )
+    store_id = models.IntegerField(primary_key=True)
+    store_name = models.CharField(max_length=155,default=0)
+    store_phone = models.IntegerField(default=0)
+    store_addr = models.TextField(default=0)
+    store_area = models.IntegerField(default=0)
+    store_pay_type = models.IntegerField(default=0,choices=pay_type_level)
+    store_deposit = models.IntegerField(default=0)
+
+class CustomerProfile(models.Model):
+    wk = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    store_id = models.IntegerField(default=0)
+
     # pass
 
 
@@ -42,7 +75,8 @@ class ClassName(object):
     """docstring for ClassName"""
     pass
 
+
 class CodeRecord(models.Model):
     code_key = models.IntegerField(primary_key=True)
-    code_name = models.CharField(max_length=100,default='not defined')
+    code_name = models.CharField(max_length=100, default='not defined')
     code_count = models.IntegerField(default=0)

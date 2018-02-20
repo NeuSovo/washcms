@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CodeRecord, User, Profile
+from cms.models import CodeRecord, User, CustomerProfile
 # Register your models here.
 
 
@@ -15,8 +15,8 @@ class CodeRecordAdmin(admin.ModelAdmin):
 
 
 class UserProfileAdmin(admin.StackedInline):
-    model = Profile
-    verbose_name = 'profile'
+    model = CustomerProfile
+    verbose_name = '商家用户信息'
     can_delete = True
 
 
@@ -29,7 +29,8 @@ class UserTypeFilter(admin.SimpleListFilter):
             (0, u'管理员'),
             (1, u'配送员'),
             (2, u'顾客'),
-            (3, u'未注册')
+            (3, u'库管'),
+            (4, u'未注册')
         )
 
     def queryset(self, request, queryset):
@@ -47,7 +48,8 @@ class UserTypeFilter(admin.SimpleListFilter):
                 return queryset.filter(user_type = 2)
             if int(self.value()) == 3:
                 return queryset.filter(user_type = 3)
-
+            if int(self.value()) == 4:
+                return queryset.filter(user_type = 4)
 
 class UserAdmin(admin.ModelAdmin):
     '''
@@ -62,22 +64,19 @@ class UserAdmin(admin.ModelAdmin):
             return u'%s' % (u"配送员",)
         elif user.user_type == 2:
             return u'%s' % (u"顾客",)
-        else:
+        elif user.user_type == 3:
+            return u'%s' % (u"库管",)
+        elif user.user_type == 4:
             return u'%s' % (u"未注册",)
 
-    def get_user_name(self, user):
-        return u'%s' % (user.profile.name)
-
-    get_user_name.short_description = u'用户名字'
     get_user_type.short_description = u'用户类型'
 
     get_user_type.allow_tags = True
-    get_user_name.allow_tags = True
 
     def get_readonly_fields(self,*args, **kwargs):
         return ['wk']
 
-    list_display = ('wk', 'get_user_type', 'get_user_name')
+    list_display = ('wk', 'get_user_type')
 
     list_filter = (UserTypeFilter,)
     inlines = (UserProfileAdmin,)

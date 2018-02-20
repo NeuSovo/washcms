@@ -2,8 +2,8 @@
 import json
 from django.shortcuts import render, HttpResponse
 
-from .handle import WechatSdk, LoginManager
-from .apps import APIServerErrorCode as ASEC
+from cms.handle import WechatSdk, LoginManager,AreaManager
+from cms.apps import APIServerErrorCode as ASEC
 
 
 def parse_info(data):
@@ -142,11 +142,28 @@ def login_view(request):
 
         return response
 
+def change_deliveryarea_view(request):
+    '''
+        add
+        del
+        change
+    '''
+    result = {}
+    if 'wckey' not in request.COOKIES:
+        result['code'] = ASEC.ERROR_PARAME
+        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+        response = parse_info(result)
+        response.status_code = 400
+        return response
+    else:
+        wckey = request.COOKIES['wckey']
 
-def modify_user_view(request):
-    """
-    view for modify user infomations
+    result = AreaManager(wckey,request.POST)
 
-    """
+    response = parse_info(result.reply()) 
+
+    return response
+
+
+def change_storeinfo_view(request):
     pass
-

@@ -8,8 +8,8 @@ from hashlib import sha256, md5
 from django.conf import settings
 from datetime import datetime, timedelta
 
-from .models import *
-from .apps import APIServerErrorCode as ASEC
+from cms.models import *
+from cms.apps import APIServerErrorCode as ASEC
 app = logging.getLogger('app.custom')
 
 
@@ -18,14 +18,19 @@ class WechatSdk(object):
     __SECRET = '18e18b264801eb53c9fe7634504f2f15'
     """
     WechatSdk
-        nothing
+    Based on Wechat user code
     """
-
     def __init__(self, code):
         super(WechatSdk, self).__init__()
         self.code = code
 
     def gen_hash(self):
+        """
+        gen_hash as session data.
+        The repetition should be a very small probability event, 
+        and from a statistical point of view, the probability is zero.
+        Return a string of length 64.
+        """
         return (sha256(os.urandom(24)).hexdigest())
 
     def get_openid(self):
@@ -76,7 +81,7 @@ class WechatSdk(object):
         user = User(wk=self.openid)
         user.save()
         # 自动为用户生成Profile
-        Profile(wk=user).save()
+        # Profile(wk=user).save()
 
         # 注册成功，分配cookie
         return {'sess': sess,
@@ -87,6 +92,7 @@ class WechatSdk(object):
         this_user = Session.objects.get(session_key=self.openid)
         sess = self.gen_hash()
 
+        this_user.we_ss_key = self.wxsskey
         this_user.session_data = sess
         this_user.expire_date = datetime.now() + timedelta(30)
         this_user.save()
@@ -125,19 +131,10 @@ class LoginManager(object):
             return cc_str == sign
 
     def get_info(self, user):
-        name = user.profile.name
-        return {'name': name}
-
-    # def get_type(self, user):
-    #     user_type = 3
-    #     if user.is_admin:
-    #         user_type = 0
-    #     if user.is_courier:
-    #         user_type = 1
-    #     if user.is_customer:
-    #         user_type = 2
-
-    #     return user_type
+        name = user.nick_name
+        avatar_links = user.avatar_links
+        return {'name': name,
+                'avatar_links':avatar_links}
 
     def reply(self):
         try:
@@ -159,3 +156,60 @@ class LoginManager(object):
                 'type': user.user_type,
                 'info': user_info,
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
+
+class AreaManager(object):
+    def __init__(self,wckey,postdata):
+        self.wckey = wckey
+        self.data = postdata
+
+    def add_area(self):
+        DeliveryArea(area_name=self.data['name']).save()
+        return {'message':'ok'}
+
+    def del_area(self):
+        try:
+            DeliveryArea.objects.get(id=self.data['id']).delete()
+        except:
+            return {'message':'ok'}
+
+        return {'message':'ok'}
+
+    def change_area(self):
+        area = DeliveryArea.objects.get(id=self.data['id'])
+        area.area_name = self.data['name']
+        area.save()
+        return {'message':'ok'}
+
+    def reply(self):
+        user = get_user(self.wckey)
+        if not user:
+            return {'message':'error'}
+
+        if not user.is_admin():
+            return {'message':'faild'}
+
+        if self.data['type'] == 'add':
+            info = self.add_area()
+        elif self.data['type'] == 'del':
+            info = self.del_area()
+        elif self.data['type'] == 'change':
+            info = self.change_area()
+        else:
+            return {'message':'error'}
+
+        return info
+
+
+def get_user(wckey):
+   try:
+       user_key = Session.objects.get(session_data=wckey)
+   except Exception as e:
+       app.error(str(e) + 'wckey:{}'.format(wckey))
+       return False
+
+   if user_key.expire_date < datetime.now():
+       return False
+
+   user = User.objects.get(wk=user_key.session_key)
+
+   return user
