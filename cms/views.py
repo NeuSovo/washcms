@@ -2,7 +2,7 @@
 import json
 from django.shortcuts import render, HttpResponse
 
-from cms.handle import WechatSdk, LoginManager, AreaManager,StoreManager
+from cms.handle import WechatSdk, LoginManager, AreaManager, StoreManager
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -54,11 +54,11 @@ def register_view(request):
         response = parse_info(result)
         return response
 
-    sess = result.pop('sess')
+    sess = result['sess']
 
     response = parse_info(result)
     response.set_cookie('wckey', sess)
-    response['wckey'] = sess
+    # response['wckey'] = sess
 
     return response
 
@@ -113,24 +113,34 @@ def login_view(request):
         user_info
     """
     result = {}
-    if 'sign' and 'time' not in request.GET:
+    # if 'sign' and 'time' not in request.GET:
+    #     result['code'] = ASEC.ERROR_PARAME
+    #     result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+    #     response = parse_info(result)
+    #     response.status_code = 400
+    #     return response
+
+    try:
+        body = json.loads(request.body)
+    except:
         result['code'] = ASEC.ERROR_PARAME
         result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
         response = parse_info(result)
         response.status_code = 400
         return response
 
-    if 'wckey' not in request.COOKIES:
+    # print (body)
+    if 'base_req' not in body:
         result['code'] = ASEC.ERROR_PARAME
         result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
         response = parse_info(result)
         response.status_code = 400
         return response
 
-    wckey = request.COOKIES['wckey']
+    wckey = body['base_req']['wckey']
     user = LoginManager(wckey=wckey)
-    if user.check(sign=request.GET['sign'],
-                  checktime=request.GET['time']):
+    if user.check(sign=body['sign'],
+                  checktime=body['time']):
         result = user.reply()
         response = parse_info(result)
 
@@ -155,7 +165,15 @@ def change_deliveryarea_view(request):
         }
     '''
     result = {}
-    body = json.loads(request.body)
+    try:
+        body = json.loads(request.body)
+    except:
+        result['code'] = ASEC.ERROR_PARAME
+        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+        response = parse_info(result)
+        response.status_code = 400
+        return response
+
     # print (body)
     if 'base_req' not in body:
         result['code'] = ASEC.ERROR_PARAME
@@ -164,7 +182,12 @@ def change_deliveryarea_view(request):
         response.status_code = 400
         return response
 
-    result = AreaManager(body)
+    if 'action' not in request.GET:
+        action = 'all'
+    else:
+        action = request.GET['action']
+
+    result = AreaManager(action=action, postdata=body)
 
     response = parse_info(result.reply())
 
@@ -195,7 +218,7 @@ def change_storeinfo_view(request):
     else:
         action = request.GET['action']
 
-    result = StoreManager(action=action,postdata=body)
+    result = StoreManager(action=action, postdata=body)
 
     response = parse_info(result.reply())
 

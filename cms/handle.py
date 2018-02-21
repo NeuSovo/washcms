@@ -58,28 +58,28 @@ class WechatSdk(object):
             'grant_type': 'authorization_code'
         }
 
-        if settings.DEBUG:
-            info = {
-                'openid': self.code,
-                'session_key': 'SESSIONKEY',
-            }
-        else:
-            try:
-                data = s.get(
-                    'https://api.weixin.qq.com/sns/jscode2session', params=params)
-            except Exception as e:
-                app.error(str(e) + '\tcode:' + str(self.code))
-                return False
+        try:
+            data = s.get(
+                'https://api.weixin.qq.com/sns/jscode2session', params=params)
+        except Exception as e:
+            app.error(str(e) + '\tcode:' + str(self.code))
+            return False
 
-            info = data.json()
+        info = data.json()
 
         if 'openid' not in info:
             app.info('parameter \'{}\' error'.format(self.code))
-            return False
-        else:
-            self.openid = info['openid']
-            self.wxsskey = info['session_key']
-            return True
+            if settings.DEBUG:
+                info = {
+                    'openid': self.code,
+                    'session_key': 'SESSIONKEY',
+                }
+            else:
+                return False
+
+        self.openid = info['openid']
+        self.wxsskey = info['session_key']
+        return True
 
     def save_user(self):
         have_user = User.objects.filter(wk=self.openid)
@@ -169,14 +169,15 @@ class LoginManager(object):
         user_info = self.get_info(user)
 
         return {'code': ASEC.LOGIN_SUCCESS,
-                'type': user.user_type,
+                'user_type': user.user_type,
                 'info': user_info,
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
 
 
 class AreaManager(object):
-    def __init__(self, postdata):
+    def __init__(self, action, postdata):
         self.wckey = postdata['base_req']['wckey']
+        self.action = action
         self.data = postdata
 
     def add_area(self):
@@ -185,8 +186,8 @@ class AreaManager(object):
         '''
         new_area = DeliveryArea(area_name=self.data['name'])
         new_area.save()
-        print(1)
-        return {'message': 'ok'}  # ,'id':new_area.id}
+
+        return {'message': 'ok', 'id': new_area.id}
 
     def del_area(self):
         '''
@@ -195,7 +196,7 @@ class AreaManager(object):
         try:
             DeliveryArea.objects.get(id=self.data['id']).delete()
         except:
-            return {'message': 'faild'}
+            return {'message': 'delete faild'}
 
         return {'message': 'ok'}
 
@@ -203,11 +204,10 @@ class AreaManager(object):
         '''
              post id,new_name
         '''
-        print(2)
         area = DeliveryArea.objects.get(id=self.data['id'])
         area.area_name = self.data['name']
         area.save()
-        return {'message': 'ok'}
+        return {'message': 'ok', 'new_name': area.area_name}
 
     def all_area(self):
         '''
@@ -228,16 +228,16 @@ class AreaManager(object):
             return {'message': 'error'}
 
         if not user.is_admin():
-            return {'message': 'faild'}
+            return {'message': 'not admin'}
 
-        if self.data['type'] == 'add':
-            info = self.add_area()
-        elif self.data['type'] == 'del':
-            info = self.del_area()
-        elif self.data['type'] == 'change':
-            info = self.change_area()
+        if self.action == 'add':
+            return self.add_area()
+        elif self.action == 'change':
+            return self.change_area()
+        elif self.action == 'del':
+            return self.del_area()
         else:
-            info = self.all_area()
+            return self.all_area()
 
         return info
 
@@ -251,26 +251,27 @@ class StoreManager(object):
         self.action = action
         self.data = postdata
 
-    def add_store(self,user):
+    def add_store(self):
         data = self.data
-        new_store = Store(store_name = data['name'],
-                          store_phone = data['phone'],
-                          store_addr = data['addr'],
-                          store_area = data['area'],
-                          store_pay_type = data['pay_type'],
-                          store_deposit = data['deposit'])
+        new_store = Store(store_name=data['name'],
+                          store_phone=data['phone'],
+                          store_addr=data['addr'],
+                          store_area=data['area'],
+                          store_pay_type=data['pay_type'],
+                          store_deposit=data['deposit'])
 
         new_store.save()
 
-        return {'message':'ok','id':new_store.store_id}
+        return {'message': 'ok', 'id': new_store.store_id}
 
     def del_store(self):
         try:
             Store.objects.get(store_id=self.data['id']).delete()
-        except:
-            return {'message':'faild'}
+        except Exception as e:
+            app.error(str(e) + '{}'.format(self.data['id']))
+            return {'message': 'delete faild'}
 
-        return {'message':'ok'}
+        return {'message': 'ok'}
 
     def change_store(self):
         data = self.data
@@ -283,23 +284,30 @@ class StoreManager(object):
             this_store.store_pay_type = data['pay_type']
             this_store.store_deposit = data['deposit']
             this_store.save()
-            return {'message':'ok'}
+            new_info = {'id': this_store.store_id,
+                        'name': this_store.store_name,
+                        'phone': this_store.store_phone,
+                        'addr': this_store.store_addr,
+                        'area': this_store.store_area,
+                        'pay_type': this_store.store_pay_type,
+                        'deposit': this_store.store_deposit}
+            return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
-            raise e
-            return {'message':'faild'}
+            app.error(str(e) + '{}'.format(data))
+            return {'message': 'faild'}
 
     def all_store(self):
         all_store = Store.objects.all()
         all_store_list = []
         for store in all_store:
-            all_store_list.append({'id':store.store_id,
-                                  'name':store.store_name,
-                                  'phone':store.store_phone,
-                                  'addr':store.store_addr,
-                                  'area':store.store_area,
-                                  'pay_type':store.store_pay_type,
-                                  'deposit':store.store_deposit})
-        return {'message':'ok','info':all_store_list}
+            all_store_list.append({'id': store.store_id,
+                                   'name': store.store_name,
+                                   'phone': store.store_phone,
+                                   'addr': store.store_addr,
+                                   'area': store.store_area,
+                                   'pay_type': store.store_pay_type,
+                                   'deposit': store.store_deposit})
+        return {'message': 'ok', 'info': all_store_list}
 
     def reply(self):
         user = get_user(self.wckey)
@@ -307,13 +315,16 @@ class StoreManager(object):
             return {'message': 'error'}
 
         if not user.is_admin():
-            return {'message': 'faild'}
+            return {'message': 'not admin'}
 
         if self.action == 'add':
-            return self.add_store(user)
+            return self.add_store()
         elif self.action == 'change':
             return self.change_store()
         elif self.action == 'del':
             return self.del_store()
         else:
             return self.all_store()
+
+    def __str__(self):
+        return len(self.postdata)
