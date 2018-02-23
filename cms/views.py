@@ -223,3 +223,25 @@ def change_storeinfo_view(request):
     response = parse_info(result.reply())
 
     return response
+
+
+def bind_user_view(request):
+    result = {}
+    try:
+        body = json.loads(request.body)
+    except:
+        result['code'] = ASEC.ERROR_PARAME
+        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+        response = parse_info(result)
+        response.status_code = 400
+        return response
+
+    # print (body)
+    if 'base_req' not in body:
+        result['code'] = ASEC.ERROR_PARAME
+        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+        response = parse_info(result)
+        response.status_code = 400
+        return response
+
+        

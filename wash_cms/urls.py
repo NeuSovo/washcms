@@ -22,10 +22,14 @@ urlpatterns = [
     url(r'^jet/', include('jet.urls', 'jet')),  # Django JET URLS
     url(r'^jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),  # Django JET dashboard URLS
     url('admin/', admin.site.urls),
-    path('auth/reg',register_view),
     # path('auth/rreg',re_register_view),# Drop
+
+    path('auth/reg',register_view),
     path('auth/login',login_view),
 
     path('boss/area',change_deliveryarea_view),
-    path('boss/store',change_storeinfo_view)
+    path('boss/store',change_storeinfo_view),
+
+    # path('user/bind')
+
 ]

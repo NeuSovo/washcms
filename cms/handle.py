@@ -307,6 +307,7 @@ class StoreManager(object):
                                    'area': store.store_area,
                                    'pay_type': store.store_pay_type,
                                    'deposit': store.store_deposit})
+
         return {'message': 'ok', 'info': all_store_list}
 
     def reply(self):
@@ -328,3 +329,9 @@ class StoreManager(object):
 
     def __str__(self):
         return len(self.postdata)
+
+
+class UserManager(object):
+    def __init__(self,postdata):
+        pass
+    
