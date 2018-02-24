@@ -28,8 +28,8 @@ class UserTypeFilter(admin.SimpleListFilter):
         return (
             (0, u'管理员'),
             (1, u'配送员'),
-            (2, u'顾客'),
-            (3, u'库管'),
+            (2, u'库管'),
+            (3, u'顾客'),
             (4, u'未注册')
         )
 

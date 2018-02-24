@@ -1,31 +1,78 @@
 # -*- coding: utf-8 -*-
 import os
+import json
 import time
 import logging
 import requests
 from hashlib import sha256, md5
 
 from django.conf import settings
+from django.shortcuts import HttpResponse
 from datetime import datetime, timedelta
 
 from cms.models import *
 from cms.apps import APIServerErrorCode as ASEC
+# from cms.views import *
+
 app = logging.getLogger('app.custom')
 
 
+def parse_info(data):
+    """
+    parser_info:
+    parmer must be in dict
+    parse dict data to json,and return HttpResponse
+    """
+    return HttpResponse(json.dumps(data, indent=4),
+                        content_type="application/json")
+
 def get_user(wckey):
-    try:
-        user_key = Session.objects.get(session_data=wckey)
-    except Exception as e:
-        app.error(str(e) + 'wckey:{}'.format(wckey))
-        return None
-
-    if user_key.expire_date < datetime.now():
-        return None
-
+    user_key = Session.objects.get(session_data=wckey)
     user = User.objects.get(wk=user_key.session_key)
 
     return user
+
+
+def usercheck(user_type = -1):
+    def wrapper(func):
+        def inner_wrapper(request):
+            result = {}
+            try:
+                body = json.loads(request.body)
+                wckey = body['base_req']['wckey']
+                print ("loginfo : {}:{}".format(func.__name__,body))
+            except:
+                result['code'] = ASEC.ERROR_PARAME
+                result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
+                response = parse_info(result)
+                response.status_code = 400
+
+                return response
+
+            try:
+                user_key = Session.objects.get(session_data=wckey)
+            except Exception as e:
+                app.error(str(e) + 'wckey:{}'.format(wckey))
+                result['code'] = ASEC.SESSION_NOT_WORK
+                result['message'] = ASEC.getMessage(ASEC.SESSION_NOT_WORK)
+
+                return parse_info(result)
+
+            if user_key.expire_date < datetime.now():
+                result['code'] = ASEC.SESSION_EXPIRED
+                result['message'] = ASEC.getMessage(ASEC.SESSION_EXPIRED)
+
+                return parse_info(result)
+
+            user = User.objects.get(wk=user_key.session_key)
+
+            if user_type == -1 or user.user_type == user_type:
+                return func(request)
+            else:
+                return parse_info({'message': 'user_type faild'})
+
+        return inner_wrapper
+    return wrapper
 
 
 class WechatSdk(object):
@@ -40,6 +87,7 @@ class WechatSdk(object):
         super(WechatSdk, self).__init__()
         self.code = code
 
+    @staticmethod
     def gen_hash(self):
         """
         gen_hash as session data.
@@ -49,6 +97,7 @@ class WechatSdk(object):
         """
         return (sha256(os.urandom(24)).hexdigest())
 
+    @staticmethod
     def get_openid(self):
         s = requests.Session()
         params = {
@@ -104,6 +153,7 @@ class WechatSdk(object):
                 'code': ASEC.REG_SUCCESS,
                 'message': ASEC.getMessage(ASEC.REG_SUCCESS)}
 
+    @staticmethod
     def flush_session(self):
         this_user = Session.objects.get(session_key=self.openid)
         sess = self.gen_hash()
@@ -129,6 +179,7 @@ class LoginManager(object):
     def __str__(self):
         return self.wckey
 
+    @staticmethod
     def check(self, sign, checktime):
         if time.time() - int(checktime) > 30:
             return False
@@ -146,6 +197,7 @@ class LoginManager(object):
         else:
             return cc_str == sign
 
+    @staticmethod
     def get_info(self, user):
         name = user.nick_name
         avatar_links = user.avatar_links
@@ -153,18 +205,8 @@ class LoginManager(object):
                 'avatar_links': avatar_links}
 
     def reply(self):
-        try:
-            user_key = Session.objects.get(session_data=self.wckey)
-        except Exception as e:
-            app.error(str(e) + 'wckey:{}'.format(self.wckey))
-            return {'code': ASEC.SESSION_NOT_WORK,
-                    'message': ASEC.getMessage(ASEC.SESSION_NOT_WORK)}
 
-        if user_key.expire_date < datetime.now():
-            return {'code': ASEC.SESSION_EXPIRED,
-                    'message': ASEC.getMessage(ASEC.SESSION_EXPIRED)}
-
-        user = User.objects.get(wk=user_key.session_key)
+        user = get_user(self.wckey)
 
         user_info = self.get_info(user)
 
@@ -174,7 +216,7 @@ class LoginManager(object):
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
 
 
-class AreaManager(object):
+class AreaManager():
     def __init__(self, action, postdata):
         self.wckey = postdata['base_req']['wckey']
         self.action = action
@@ -209,6 +251,7 @@ class AreaManager(object):
         area.save()
         return {'message': 'ok', 'new_name': area.area_name}
 
+    @staticmethod
     def all_area(self):
         '''
             None
@@ -224,11 +267,6 @@ class AreaManager(object):
 
     def reply(self):
         user = get_user(self.wckey)
-        if user is None:
-            return {'message': 'error'}
-
-        if not user.is_admin():
-            return {'message': 'not admin'}
 
         if self.action == 'add':
             return self.add_area()
@@ -296,6 +334,7 @@ class StoreManager(object):
             app.error(str(e) + '{}'.format(data))
             return {'message': 'faild'}
 
+    @staticmethod
     def all_store(self):
         all_store = Store.objects.all()
         all_store_list = []
@@ -312,11 +351,6 @@ class StoreManager(object):
 
     def reply(self):
         user = get_user(self.wckey)
-        if user is None:
-            return {'message': 'error'}
-
-        if not user.is_admin():
-            return {'message': 'not admin'}
 
         if self.action == 'add':
             return self.add_store()
@@ -332,6 +366,5 @@ class StoreManager(object):
 
 
 class UserManager(object):
-    def __init__(self,postdata):
+    def __init__(self, postdata):
         pass
-    

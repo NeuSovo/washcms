@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import json
-from django.shortcuts import render, HttpResponse
+from django.shortcuts import HttpResponse
 
-from cms.handle import WechatSdk, LoginManager, AreaManager, StoreManager
+from cms.handle import WechatSdk, LoginManager, AreaManager, StoreManager, usercheck
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -97,7 +97,7 @@ def re_register_view(request):
     return response
 '''
 
-
+@usercheck()
 def login_view(request):
     """
     view for login
@@ -153,6 +153,7 @@ def login_view(request):
         return response
 
 
+@usercheck(user_type = 0)
 def change_deliveryarea_view(request):
     '''
         add
@@ -164,23 +165,7 @@ def change_deliveryarea_view(request):
             }
         }
     '''
-    result = {}
-    try:
-        body = json.loads(request.body)
-    except:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
-
-    # print (body)
-    if 'base_req' not in body:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
+    body = json.loads(request.body)
 
     if 'action' not in request.GET:
         action = 'all'
@@ -194,24 +179,10 @@ def change_deliveryarea_view(request):
     return response
 
 
+@usercheck(user_type = 0)
 def change_storeinfo_view(request):
-    result = {}
-    try:
-        body = json.loads(request.body)
-    except:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
 
-    # print (body)
-    if 'base_req' not in body:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
+    body = json.loads(request.body)
 
     if 'action' not in request.GET:
         action = 'all'
@@ -225,23 +196,7 @@ def change_storeinfo_view(request):
     return response
 
 
+@usercheck(user_type = 0)
 def bind_user_view(request):
-    result = {}
-    try:
-        body = json.loads(request.body)
-    except:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
-
-    # print (body)
-    if 'base_req' not in body:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
-
-        
+    body = json.loads(request.body)
+    return None
