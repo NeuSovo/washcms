@@ -2,14 +2,15 @@
 import json
 from django.shortcuts import HttpResponse
 
-from cms.handle import WechatSdk, LoginManager, AreaManager, StoreManager, usercheck
+from cms.handle import (WechatSdk, LoginManager, AreaManager, 
+                        StoreManager, usercheck,SetUserManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
 def parse_info(data):
     """
     parser_info:
-    parmer must be in dict
+    parmer must be a dict
     parse dict data to json,and return HttpResponse
     """
     return HttpResponse(json.dumps(data, indent=4),
@@ -118,24 +119,8 @@ def login_view(request):
     #     result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
     #     response = parse_info(result)
     #     response.status_code = 400
-    #     return response
-
-    try:
-        body = json.loads(request.body)
-    except:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
-
-    # print (body)
-    if 'base_req' not in body:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
+    
+    body = json.loads(request.body)
 
     wckey = body['base_req']['wckey']
     user = LoginManager(wckey=wckey)
@@ -197,6 +182,20 @@ def change_storeinfo_view(request):
 
 
 @usercheck(user_type = 0)
-def bind_user_view(request):
+def set_user_type_view(request):
+    '''
+    Admin 0
+    peisong 1
+    kuguan 2
+    '''
     body = json.loads(request.body)
-    return None
+
+    result = SetUserManager(postdata = body)
+    response = parse_info(result.reply())
+
+    return response
+
+
+@usercheck(user_type = 3)
+def bind_user_view(request):
+    pass

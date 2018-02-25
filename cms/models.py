@@ -62,6 +62,9 @@ class CustomerProfile(models.Model):
     store_id = models.IntegerField(default=0)
 
     # pass
+class CourierProfile(models.Model):
+    wk = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
+    area_id = models.IntegerField(default=-1)
 
 class Session(models.Model):
     session_key = models.CharField(max_length=100, primary_key=True)

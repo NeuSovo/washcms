@@ -2,6 +2,7 @@
 import os
 import json
 import time
+import base64
 import logging
 import requests
 from hashlib import sha256, md5
@@ -20,11 +21,12 @@ app = logging.getLogger('app.custom')
 def parse_info(data):
     """
     parser_info:
-    parmer must be in dict
+    parmer must be a dict
     parse dict data to json,and return HttpResponse
     """
     return HttpResponse(json.dumps(data, indent=4),
                         content_type="application/json")
+
 
 def get_user(wckey):
     user_key = Session.objects.get(session_data=wckey)
@@ -33,14 +35,14 @@ def get_user(wckey):
     return user
 
 
-def usercheck(user_type = -1):
+def usercheck(user_type=-1):
     def wrapper(func):
         def inner_wrapper(request):
             result = {}
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
-                print ("loginfo : {}:{}".format(func.__name__,body))
+                print("loginfo : {}:{}".format(func.__name__, body))
             except:
                 result['code'] = ASEC.ERROR_PARAME
                 result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
@@ -87,7 +89,6 @@ class WechatSdk(object):
         super(WechatSdk, self).__init__()
         self.code = code
 
-    @staticmethod
     def gen_hash(self):
         """
         gen_hash as session data.
@@ -97,7 +98,6 @@ class WechatSdk(object):
         """
         return (sha256(os.urandom(24)).hexdigest())
 
-    @staticmethod
     def get_openid(self):
         s = requests.Session()
         params = {
@@ -153,7 +153,6 @@ class WechatSdk(object):
                 'code': ASEC.REG_SUCCESS,
                 'message': ASEC.getMessage(ASEC.REG_SUCCESS)}
 
-    @staticmethod
     def flush_session(self):
         this_user = Session.objects.get(session_key=self.openid)
         sess = self.gen_hash()
@@ -179,7 +178,7 @@ class LoginManager(object):
     def __str__(self):
         return self.wckey
 
-    @staticmethod
+    #
     def check(self, sign, checktime):
         if time.time() - int(checktime) > 30:
             return False
@@ -197,12 +196,17 @@ class LoginManager(object):
         else:
             return cc_str == sign
 
-    @staticmethod
+    def gen_base64(self, txt):
+        tmp = base64.b64encode(str(txt).encode('utf-8'))
+        return str(tmp, 'utf-8')
+
     def get_info(self, user):
         name = user.nick_name
         avatar_links = user.avatar_links
+
         return {'name': name,
-                'avatar_links': avatar_links}
+                'avatar_links': avatar_links,
+                'qrcod': self.gen_base64(user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
 
     def reply(self):
 
@@ -216,7 +220,7 @@ class LoginManager(object):
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
 
 
-class AreaManager():
+class AreaManager(object):
     def __init__(self, action, postdata):
         self.wckey = postdata['base_req']['wckey']
         self.action = action
@@ -252,7 +256,7 @@ class AreaManager():
         return {'message': 'ok', 'new_name': area.area_name}
 
     @staticmethod
-    def all_area(self):
+    def all_area():
         '''
             None
         '''
@@ -275,7 +279,7 @@ class AreaManager():
         elif self.action == 'del':
             return self.del_area()
         else:
-            return self.all_area()
+            return AreaManager.all_area()
 
         return info
 
@@ -335,7 +339,7 @@ class StoreManager(object):
             return {'message': 'faild'}
 
     @staticmethod
-    def all_store(self):
+    def all_store():
         all_store = Store.objects.all()
         all_store_list = []
         for store in all_store:
@@ -359,12 +363,44 @@ class StoreManager(object):
         elif self.action == 'del':
             return self.del_store()
         else:
-            return self.all_store()
+            return StoreManager.all_store()
 
     def __str__(self):
         return len(self.postdata)
 
 
-class UserManager(object):
+class SetUserManager(object):
     def __init__(self, postdata):
-        pass
+        self.data = postdata
+
+    def set_user(self, uid, set_type, area_id=-1):
+        try:
+            uid = base64.b64decode(uid.encode('utf-8'))
+            uid = str(uid, 'utf-8')
+        except:
+            return {'message': 'faild'}
+
+        try:
+            user = User.objects.get(wk=uid)
+        except:
+            return {'message': 'faild'}
+
+        if set_type > 3:
+            return {'message': 'faild'}
+
+        if set_type == 1:
+            CourierProfile(wk=user, area_id=area_id).save()
+
+        user.user_type = set_type
+        user.save()
+        return {'message': 'ok'}
+
+    def reply(self):
+        uid = self.data['uid']
+        set_type = self.data['set_type']
+        if self.data['set_type'] == 1:
+            area_id = self.data['area_id']
+        else:
+            area_id = -1
+
+        return self.set_user(uid, set_type, area_id)

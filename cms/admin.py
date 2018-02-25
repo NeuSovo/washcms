@@ -76,7 +76,7 @@ class UserAdmin(admin.ModelAdmin):
     def get_readonly_fields(self,*args, **kwargs):
         return ['wk']
 
-    list_display = ('wk', 'get_user_type')
+    list_display = ('wk', 'nick_name','get_user_type')
 
     list_filter = (UserTypeFilter,)
     inlines = (UserProfileAdmin,)
