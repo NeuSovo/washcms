@@ -2,8 +2,8 @@
 import json
 from django.shortcuts import HttpResponse
 
-from cms.handle import (WechatSdk, LoginManager, AreaManager, 
-                        StoreManager, usercheck,SetUserManager)
+from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager, 
+                        usercheck,SetUserManager,BindUserManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -114,12 +114,6 @@ def login_view(request):
         user_info
     """
     result = {}
-    # if 'sign' and 'time' not in request.GET:
-    #     result['code'] = ASEC.ERROR_PARAME
-    #     result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-    #     response = parse_info(result)
-    #     response.status_code = 400
-    
     body = json.loads(request.body)
 
     wckey = body['base_req']['wckey']
@@ -196,6 +190,11 @@ def set_user_type_view(request):
     return response
 
 
-@usercheck(user_type = 3)
+@usercheck(user_type = 4)
 def bind_user_view(request):
-    pass
+    body = json.loads(request.body)
+
+    result = BindUserManager(postdata = body)
+    response = parse_info(result.reply())
+
+    return response

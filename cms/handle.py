@@ -404,3 +404,36 @@ class SetUserManager(object):
             area_id = -1
 
         return self.set_user(uid, set_type, area_id)
+
+
+class BindUserManager(object):
+    """docstring for BindUserManager"""
+    def __init__(self, postdata):
+        self.data = postdata
+        self.wk = postdata['base_req']['wckey']
+
+    @staticmethod
+    def check_id_exist(store_id):
+        try:
+            Store.objects.get(store_id = store_id)
+            return True
+        except Exception as e:
+            app.info(str(e))
+            return False
+
+    def bind(self,user,store_id):
+        new_customer = CustomerProfile(wk=user,store_id=store_id)
+        new_customer.save()
+        user.user_type = 3
+        user.save()
+        return {'message':'ok'}
+    
+    def reply(self):
+        store_id = self.data['store_id']
+
+        if not BindUserManager.check_id_exist(store_id):
+            return {'message':'store_id not exist'}
+
+        user = get_user(wckey = self.wk)
+
+        return self.bind(user,store_id)

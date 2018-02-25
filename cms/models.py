@@ -13,7 +13,7 @@ class User(models.Model):
         (3, u'顾客'),
         (4, u'未注册')
     )
-    wk = models.CharField(max_length=100,unique=True)
+    wk = models.CharField(max_length=100,unique=True,primary_key=True)
     user_type = models.IntegerField(
         default=4, choices=type_level, verbose_name='用户身份')
     nick_name = models.CharField(max_length=100, default='nick_name')
