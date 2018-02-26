@@ -8,8 +8,8 @@ class User(models.Model):
 
     type_level = (
         (0, u'管理员'),
-        (1, u'配送员'),
-        (2, u'库管'),
+        (1, u'库管'),
+        (2, u'配送员'),
         (3, u'顾客'),
         (4, u'未注册')
     )
@@ -27,7 +27,7 @@ class User(models.Model):
 
     @staticmethod
     def all_courier():
-        return User.objects.all().filter(user_type=1)
+        return User.objects.all().filter(user_type=2)
 
     @staticmethod
     def all_customer():
@@ -83,7 +83,7 @@ class Store(models.Model):
 class CustomerProfile(models.Model):
 
     wk = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
-    store_id = models.IntegerField(default=0)
+    store_id = models.IntegerField(default=-1)
 
 
 class CourierProfile(models.Model):
@@ -93,7 +93,40 @@ class CourierProfile(models.Model):
 
 
 class Goods(models.Model):
-    pass
+    goods_id = models.AutoField(primary_key=True)
+    goods_name = models.CharField(max_length=155,default='not name')
+    goods_spec = models.CharField(max_length=20,default='箱')
+    goods_stock = models.IntegerField(default=0)
+    is_recover = models.IntegerField(default=0) # 0 回收,1不回收
+
+
+class Order(models.Model):
+    pay_from_level = (
+        ('0','现金'),
+        ('1','微信'),
+        ('2','月结'),
+    )
+
+    order_id = models.AutoField(primary_key=True)
+    create_time = models.DateField(auto_now_add=True)
+    shop_id = models.IntegerField(blank=False)
+    user_id = models.CharField(blank=False)
+    area_id = models.IntegerField(blank=False)
+    receive_time = models.TimeField(blank=True)
+    is_pay = models.IntegerField(default = 1)
+    pay_from = models.IntegerField(default = '未支付')
+    goods_money = models.DecimalField(max_digits=5, decimal_places=2)
+    order_remarks = models.TextField(default='无')
+    done_time = models.DateTimeFielda
+
+
+class OrderDetail(models.Model):
+    order_id = models.IntegerField()
+    goods_id = models.IntegerField()
+    goods_num = models.IntegerField()
+    goods_price = models.DecimalField(max_digits=3,decimal_places=2)
+    total_price = models.DecimalField(max_digits=5,decimal_places=2)
+
 
 
 class Session(models.Model):

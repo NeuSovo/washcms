@@ -68,7 +68,7 @@ def usercheck(user_type=-1):
 
             user = User.objects.get(wk=user_key.session_key)
 
-            if user_type == -1 or user.user_type == user_type:
+            if user_type == -1 or user.user_type <= user_type:
                 return func(request)
             else:
                 return parse_info({'message': 'user_type faild'})
@@ -382,7 +382,7 @@ class SetUserManager(object):
         if set_type > 3:
             return {'message': 'faild'}
 
-        if set_type == 1:
+        if set_type == 2:
             CourierProfile(wk=user, area_id=area_id).save()
 
         user.user_type = set_type
@@ -419,8 +419,12 @@ class BindUserManager(object):
     def bind(self, user, store_id):
         new_customer = CustomerProfile(wk=user, store_id=store_id)
         new_customer.save()
+        if user.user_type <= 3:
+            return {'message': 'faild'}
+
         user.user_type = 3
         user.save()
+        
         return {'message': 'ok'}
 
     def reply(self):

@@ -27,8 +27,8 @@ class UserTypeFilter(admin.SimpleListFilter):
     def lookups(self, request, model_admin):
         return (
             (0, u'管理员'),
-            (1, u'配送员'),
-            (2, u'库管'),
+            (1, u'库管'),
+            (2, u'配送员'),
             (3, u'顾客'),
             (4, u'未注册')
         )
@@ -60,11 +60,11 @@ class UserAdmin(admin.ModelAdmin):
     def get_user_type(self, user):
         if user.user_type == 0:
             return u'%s' % (u"管理员",)
-        elif user.user_type == 1:
+        elif user.user_type == 2:
             return u'%s' % (u"配送员",)
         elif user.user_type == 3:
             return u'%s' % (u"顾客",)
-        elif user.user_type == 2:
+        elif user.user_type == 1:
             return u'%s' % (u"库管",)
         elif user.user_type == 4:
             return u'%s' % (u"未注册",)

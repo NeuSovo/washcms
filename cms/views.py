@@ -165,6 +165,20 @@ def set_user_type_view(request):
     return response
 
 
+@usercheck(user_type = 1)
+def change_goods_view(request):
+    """
+    """
+    body = json.loads(request.body)
+
+    if 'action' not in request.GET:
+        action = 'all'
+    else:
+        action = request.GET['action']
+
+    pass
+    
+
 @usercheck(user_type = 4)
 def bind_user_view(request):
     body = json.loads(request.body)
@@ -173,3 +187,5 @@ def bind_user_view(request):
     response = parse_info(result.reply())
 
     return response
+
+
