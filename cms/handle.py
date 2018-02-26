@@ -260,7 +260,7 @@ class AreaManager(object):
         '''
             None
         '''
-        allarea = DeliveryArea.objects.all()
+        allarea = DeliveryArea.Area_all()
         all_area_list = []
         for _i in allarea:
             all_area_list.append({'id': _i.id,
@@ -272,16 +272,12 @@ class AreaManager(object):
     def reply(self):
         user = get_user(self.wckey)
 
-        if self.action == 'add':
-            return self.add_area()
-        elif self.action == 'change':
-            return self.change_area()
-        elif self.action == 'del':
-            return self.del_area()
-        else:
+        method_name = self.action + '_area'
+        try:
+            method = getattr(self, method_name)
+            return method()
+        except:
             return AreaManager.all_area()
-
-        return info
 
 
 class StoreManager(object):
@@ -340,7 +336,7 @@ class StoreManager(object):
 
     @staticmethod
     def all_store():
-        all_store = Store.objects.all()
+        all_store = Store.Store_all()
         all_store_list = []
         for store in all_store:
             all_store_list.append({'id': store.store_id,
@@ -356,13 +352,11 @@ class StoreManager(object):
     def reply(self):
         user = get_user(self.wckey)
 
-        if self.action == 'add':
-            return self.add_store()
-        elif self.action == 'change':
-            return self.change_store()
-        elif self.action == 'del':
-            return self.del_store()
-        else:
+        method_name = self.action + '_store'
+        try:
+            method = getattr(self, method_name)
+            return method()
+        except:
             return StoreManager.all_store()
 
     def __str__(self):
@@ -408,6 +402,7 @@ class SetUserManager(object):
 
 class BindUserManager(object):
     """docstring for BindUserManager"""
+
     def __init__(self, postdata):
         self.data = postdata
         self.wk = postdata['base_req']['wckey']
@@ -415,25 +410,25 @@ class BindUserManager(object):
     @staticmethod
     def check_id_exist(store_id):
         try:
-            Store.objects.get(store_id = store_id)
+            Store.objects.get(store_id=store_id)
             return True
         except Exception as e:
             app.info(str(e))
             return False
 
-    def bind(self,user,store_id):
-        new_customer = CustomerProfile(wk=user,store_id=store_id)
+    def bind(self, user, store_id):
+        new_customer = CustomerProfile(wk=user, store_id=store_id)
         new_customer.save()
         user.user_type = 3
         user.save()
-        return {'message':'ok'}
-    
+        return {'message': 'ok'}
+
     def reply(self):
         store_id = self.data['store_id']
 
         if not BindUserManager.check_id_exist(store_id):
-            return {'message':'store_id not exist'}
+            return {'message': 'store_id not exist'}
 
-        user = get_user(wckey = self.wk)
+        user = get_user(wckey=self.wk)
 
-        return self.bind(user,store_id)
+        return self.bind(user, store_id)

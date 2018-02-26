@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile
+from cms.models import CodeRecord, User, CustomerProfile,Store
 # Register your models here.
 
 
@@ -82,5 +82,19 @@ class UserAdmin(admin.ModelAdmin):
     inlines = (UserProfileAdmin,)
 
 
+class StoreAdmin(admin.ModelAdmin):
+    '''
+        Admin View for Store
+    '''
+    list_display = ('store_id','store_name','store_area','store_pay_type')
+    list_filter = ('store_pay_type','store_area')
+    # inlines = [
+    #     Inline,
+    # ]
+    # raw_id_fields = ('',)
+    # readonly_fields = ('',)
+    # search_fields = ('',)
+
+admin.site.register(Store, StoreAdmin)
 admin.site.register(User, UserAdmin)
 admin.site.register(CodeRecord, CodeRecordAdmin)
