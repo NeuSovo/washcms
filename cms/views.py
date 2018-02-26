@@ -64,38 +64,13 @@ def register_view(request):
     return response
 
 
-'''Meaged with register_view
+'''
 def re_register_view(request):
     """
     view for re-register
     Accept the code from WeChat, and re-register this user on the server
-    TODO:
-        Merged with register_view interface
     
-    """
-    result = {}
-    if 'code' not in request.GET:
-        result['code'] = ASEC.ERROR_PARAME
-        result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-        response = parse_info(result)
-        response.status_code = 400
-        return response
-
-    wk = WechatSdk(request.GET['code'])
-    if not wk.get_openid():
-        result['code'] = ASEC.WRONG_PARAME
-        result['message'] = ASEC.getMessage(ASEC.WRONG_PARAME)
-        response = parse_info(result)
-        return response
-
-    result = wk.flush_session()
-    sess = result.pop('sess')
-
-    response = parse_info(result)
-    response.set_cookie('wckey', sess)
-    response['wckey'] = sess
-
-    return response
+    ***Merged with register_view interface***
 '''
 
 @usercheck()
