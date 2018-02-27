@@ -61,13 +61,13 @@ class Store(models.Model):
         (1, '月结'),
     )
     area_level = []
-    # for i in DeliveryArea.area_all():
-    #     area_level.append([i.id, i.area_name])
+    for i in DeliveryArea.area_all():
+        area_level.append([i.id, i.area_name])
 
     store_id = models.AutoField(primary_key=True)
     store_name = models.CharField(max_length=155, default=0)
     store_phone = models.IntegerField(default=0)
-    store_addr = models.TextField(default=0)
+    store_addr = models.CharField(max_length=155)
     store_area = models.IntegerField(default=0, choices=area_level)
     store_pay_type = models.IntegerField(default=0, choices=pay_type_level)
     store_deposit = models.IntegerField(default=0)
@@ -93,11 +93,19 @@ class CourierProfile(models.Model):
 
 
 class Goods(models.Model):
+    recover_level = (
+        (0,'回收'),
+        (1,'不回收')
+    )
     goods_id = models.AutoField(primary_key=True)
     goods_name = models.CharField(max_length=155,default='not name')
     goods_spec = models.CharField(max_length=20,default='箱')
     goods_stock = models.IntegerField(default=0)
-    is_recover = models.IntegerField(default=0) # 0 回收,1不回收
+    is_recover = models.IntegerField(default=0,choices=recover_level)
+
+    @staticmethod
+    def goods_all():
+        return Goods.objects.all()
 
 
 class Order(models.Model):
@@ -107,17 +115,17 @@ class Order(models.Model):
         ('2','月结'),
     )
 
-    order_id = models.AutoField(primary_key=True)
+    order_id = models.IntegerField(primary_key=True)
     create_time = models.DateField(auto_now_add=True)
     shop_id = models.IntegerField(blank=False)
     user_id = models.CharField(max_length=155)
     area_id = models.IntegerField(blank=False)
     receive_time = models.TimeField(blank=True)
-    is_pay = models.IntegerField(default = 1)
-    pay_from = models.IntegerField(default = '未支付')
+    is_pay = models.IntegerField(default=1)
+    pay_from = models.IntegerField(default='未支付')
     goods_money = models.DecimalField(max_digits=5, decimal_places=2)
-    order_remarks = models.TextField(default='无')
-    done_time = models.DateTimeField()
+    order_remarks = models.CharField(max_length=155)
+    done_time = models.DateTimeField(blank=True)
 
 
 class OrderDetail(models.Model):

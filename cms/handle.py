@@ -3,6 +3,7 @@ import os
 import json
 import time
 import base64
+import random
 import logging
 import requests
 from hashlib import sha256, md5
@@ -42,8 +43,9 @@ def usercheck(user_type=-1):
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
-                print("loginfo : {}:{}".format(func.__name__, body))
-            except:
+                print("backup data : {}:{}".format(func.__name__, body))
+            except Exception as e:
+                app.info(str(e))
                 result['code'] = ASEC.ERROR_PARAME
                 result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
                 response = parse_info(result)
@@ -89,14 +91,15 @@ class WechatSdk(object):
         super(WechatSdk, self).__init__()
         self.code = code
 
-    def gen_hash(self):
+    @staticmethod
+    def gen_hash():
         """
         gen_hash as session data.
-        The repetition should be a very small probability event, 
+        The repetition should be a very small probability event,
         and from a statistical point of view, the probability is zero.
         Return a string of length 64.
         """
-        return (sha256(os.urandom(24)).hexdigest())
+        return sha256(os.urandom(24)).hexdigest()
 
     def get_openid(self):
         s = requests.Session()
@@ -136,7 +139,7 @@ class WechatSdk(object):
             # 已注册过
             return self.flush_session()
 
-        sess = self.gen_hash()
+        sess = WechatSdk.gen_hash()
 
         Session(session_key=self.openid,
                 session_data=sess,
@@ -155,7 +158,7 @@ class WechatSdk(object):
 
     def flush_session(self):
         this_user = Session.objects.get(session_key=self.openid)
-        sess = self.gen_hash()
+        sess = WechatSdk.gen_hash()
 
         this_user.we_ss_key = self.wxsskey
         this_user.session_data = sess
@@ -196,7 +199,8 @@ class LoginManager(object):
         else:
             return cc_str == sign
 
-    def gen_base64(self, txt):
+    @staticmethod
+    def gen_base64(txt):
         tmp = base64.b64encode(str(txt).encode('utf-8'))
         return str(tmp, 'utf-8')
 
@@ -206,7 +210,7 @@ class LoginManager(object):
 
         return {'name': name,
                 'avatar_links': avatar_links,
-                'qrcod': self.gen_base64(user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
+                'qrcod': LoginManager.gen_base64(user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
 
     def reply(self):
 
@@ -241,7 +245,8 @@ class AreaManager(object):
         """
         try:
             DeliveryArea.objects.get(id=self.data['id']).delete()
-        except:
+        except Exception as e:
+            app.info(str(e))
             return {'message': 'delete failed'}
 
         return {'message': 'ok'}
@@ -335,6 +340,20 @@ class StoreManager(object):
             return {'message': 'failed'}
 
     @staticmethod
+    def get_store_area_id(store_id):
+        try:
+            store = Store.objects.get(store_id=store_id)
+            return store.store_area
+        except Exception as e:
+            app.error(str(e))
+            return None
+
+    def setprice_store(self):
+              
+        pass
+
+
+    @staticmethod
     def all_store():
         all_store = Store.store_all()
         all_store_list = []
@@ -350,8 +369,6 @@ class StoreManager(object):
         return {'message': 'ok', 'info': all_store_list}
 
     def reply(self):
-        user = get_user(self.wckey)
-
         method_name = self.action + '_store'
         try:
             method = getattr(self, method_name)
@@ -360,7 +377,7 @@ class StoreManager(object):
             return StoreManager.all_store()
 
     def __str__(self):
-        return len(self.postdata)
+        return len(self.data)
 
 
 class SetUserManager(object):
@@ -371,7 +388,8 @@ class SetUserManager(object):
         try:
             uid = base64.b64decode(uid.encode('utf-8'))
             uid = str(uid, 'utf-8')
-        except:
+        except Exception as e:
+            app.info(str(e))
             return {'message': 'failed'}
 
         try:
@@ -400,7 +418,7 @@ class SetUserManager(object):
         return self.set_user(uid, set_type, area_id)
 
 
-class BindUserManager(object):
+class CustomerUserManager(object):
     """docstring for BindUserManager"""
 
     def __init__(self, postdata):
@@ -427,10 +445,18 @@ class BindUserManager(object):
         
         return {'message': 'ok'}
 
+    @staticmethod
+    def get_user_store_id(user):
+        try:
+            store_user = CustomerProfile.objects.get(wk=user)
+            return store_user.store_id
+        except Exception as e:
+            return None
+
     def reply(self):
         store_id = self.data['store_id']
 
-        if not BindUserManager.check_id_exist(store_id):
+        if not CustomerUserManager.check_id_exist(store_id):
             return {'message': 'store_id not exist'}
 
         user = get_user(wckey=self.wk)
@@ -440,7 +466,79 @@ class BindUserManager(object):
 
 class GoodsManager(object):
     """docstring for GoodsManager"""
+    """
+    action:
+        add
+        del
+        change
+        all
+    TODO 完善
+    """
     def __init__(self, postdata,action = all):
         self.data = postdata
         self.action = action
         
+    def add_goods(self):
+        goods_name = self.data['name']
+        goods_spec = self.data['spec']
+        goods_stock = self.data['stock']
+        is_recover = self.data['recover']
+        new_goods = Goods(goods_name=goods_name,goods_spec=goods_spec,goods_stock=goods_stock,is_recover=is_recover)
+        new_goods.save()
+
+        return {'message': 'ok','id': new_goods.goods_id}
+
+    def del_goods(self):
+        goods_id = self.data['id']
+        try:
+            Goods.objects.get(goods_id=goods_id).delete()
+            return {'message': 'ok'}
+        except Exception as e:
+            app.info(str(e))
+            return {'message': 'ok'}
+
+    @staticmethod
+    def all_goods():
+        goods_all = Goods.goods_all()
+
+        return_list = []
+        for i in goods_all:
+            return_list.append({'goods_id': i.goods_id,'goods_name': i.goods_name,'goods_spec': i.goods_spec,
+                                'goods_stock': i.goods_stock,'is_recover': i.is_recover})
+
+        return {'message': 'ok','info': return_list}
+
+    def reply(self):
+        method_name = self.action + '_goods'
+        try:
+            method = getattr(self, method_name)
+            return method()
+        except :
+            return GoodsManager.all_goods()
+
+
+class OrderManager(object):
+    def __init__(self,postdata):
+        self.data = postdata
+        self.wckey = postdata['base_req']['wckey']
+
+    @staticmethod
+    def gen_order_id():
+        order_id = datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
+
+        return order_id
+
+    def save_order(self):
+        user = get_user(wckey=self.wckey)
+   
+        order_id = OrderManager.gen_order_id()
+        store_id = CustomerUserManager.get_user_store_id(user)
+        area_id = StoreManager.get_store_area_id(store_id=store_id)
+        remarks = self.data['remarks']
+
+        pass
+
+    def save_order_detail(self,order_id):
+        goods = self.data['goods']
+        for _ in goods:
+            OrderDetail()

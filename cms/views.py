@@ -3,7 +3,7 @@ import json
 from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager, 
-                        usercheck,SetUserManager,BindUserManager)
+                        usercheck,SetUserManager,CustomerUserManager,GoodsManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -73,6 +73,7 @@ def re_register_view(request):
     ***Merged with register_view interface***
 '''
 
+
 @usercheck()
 def login_view(request):
     """
@@ -107,9 +108,9 @@ def login_view(request):
         return response
 
 
-@usercheck(user_type = 0)
+@usercheck(user_type=0)
 def change_deliveryarea_view(request):
-    '''
+    """
         add
         del
         change
@@ -118,7 +119,7 @@ def change_deliveryarea_view(request):
             'wckey':'',
             }
         }
-    '''
+    """
     body = json.loads(request.body)
 
     if 'action' not in request.GET:
@@ -133,7 +134,7 @@ def change_deliveryarea_view(request):
     return response
 
 
-@usercheck(user_type = 0)
+@usercheck(user_type=0)
 def change_storeinfo_view(request):
 
     body = json.loads(request.body)
@@ -152,11 +153,11 @@ def change_storeinfo_view(request):
 
 @usercheck(user_type = 0)
 def set_user_type_view(request):
-    '''
-    Admin 0
-    peisong 1
-    kuguan 2
-    '''
+    """
+        Admin 0
+        peisong 1
+        kuguan 2
+    """
     body = json.loads(request.body)
 
     result = SetUserManager(postdata = body)
@@ -165,7 +166,7 @@ def set_user_type_view(request):
     return response
 
 
-@usercheck(user_type = 1)
+@usercheck(user_type=1)
 def change_goods_view(request):
     """
     """
@@ -176,14 +177,17 @@ def change_goods_view(request):
     else:
         action = request.GET['action']
 
-    pass
+    result = GoodsManager(action=action,postdata=body)
+    response = parse_info(result.reply())
+
+    return response
     
 
-@usercheck(user_type = 4)
+@usercheck(user_type=4)
 def bind_user_view(request):
     body = json.loads(request.body)
 
-    result = BindUserManager(postdata = body)
+    result = CustomerUserManager(postdata = body)
     response = parse_info(result.reply())
 
     return response
