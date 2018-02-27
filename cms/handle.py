@@ -71,7 +71,7 @@ def usercheck(user_type=-1):
             if user_type == -1 or user.user_type <= user_type:
                 return func(request)
             else:
-                return parse_info({'message': 'user_type faild'})
+                return parse_info({'message': 'user_type failed'})
 
         return inner_wrapper
     return wrapper
@@ -227,29 +227,29 @@ class AreaManager(object):
         self.data = postdata
 
     def add_area(self):
-        '''
+        """
             post name
-        '''
+        """
         new_area = DeliveryArea(area_name=self.data['name'])
         new_area.save()
 
         return {'message': 'ok', 'id': new_area.id}
 
     def del_area(self):
-        '''
+        """
             post id
-        '''
+        """
         try:
             DeliveryArea.objects.get(id=self.data['id']).delete()
         except:
-            return {'message': 'delete faild'}
+            return {'message': 'delete failed'}
 
         return {'message': 'ok'}
 
     def change_area(self):
-        '''
+        """
              post id,new_name
-        '''
+        """
         area = DeliveryArea.objects.get(id=self.data['id'])
         area.area_name = self.data['name']
         area.save()
@@ -257,10 +257,10 @@ class AreaManager(object):
 
     @staticmethod
     def all_area():
-        '''
+        """
             None
-        '''
-        allarea = DeliveryArea.Area_all()
+        """
+        allarea = DeliveryArea.area_all()
         all_area_list = []
         for _i in allarea:
             all_area_list.append({'id': _i.id,
@@ -307,7 +307,7 @@ class StoreManager(object):
             Store.objects.get(store_id=self.data['id']).delete()
         except Exception as e:
             app.error(str(e) + '{}'.format(self.data['id']))
-            return {'message': 'delete faild'}
+            return {'message': 'delete failed'}
 
         return {'message': 'ok'}
 
@@ -332,11 +332,11 @@ class StoreManager(object):
             return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
             app.error(str(e) + '{}'.format(data))
-            return {'message': 'faild'}
+            return {'message': 'failed'}
 
     @staticmethod
     def all_store():
-        all_store = Store.Store_all()
+        all_store = Store.store_all()
         all_store_list = []
         for store in all_store:
             all_store_list.append({'id': store.store_id,
@@ -372,15 +372,15 @@ class SetUserManager(object):
             uid = base64.b64decode(uid.encode('utf-8'))
             uid = str(uid, 'utf-8')
         except:
-            return {'message': 'faild'}
+            return {'message': 'failed'}
 
         try:
             user = User.objects.get(wk=uid)
         except:
-            return {'message': 'faild'}
+            return {'message': 'failed'}
 
         if set_type > 3:
-            return {'message': 'faild'}
+            return {'message': 'failed'}
 
         if set_type == 2:
             CourierProfile(wk=user, area_id=area_id).save()
@@ -420,7 +420,7 @@ class BindUserManager(object):
         new_customer = CustomerProfile(wk=user, store_id=store_id)
         new_customer.save()
         if user.user_type <= 3:
-            return {'message': 'faild'}
+            return {'message': 'failed'}
 
         user.user_type = 3
         user.save()
@@ -436,3 +436,11 @@ class BindUserManager(object):
         user = get_user(wckey=self.wk)
 
         return self.bind(user, store_id)
+
+
+class GoodsManager(object):
+    """docstring for GoodsManager"""
+    def __init__(self, postdata,action = all):
+        self.data = postdata
+        self.action = action
+        

@@ -34,11 +34,11 @@ class User(models.Model):
         return User.objects.all().filter(user_type=3)
 
     @staticmethod
-    def User_all():
+    def user_all():
         return User.objects.all()
 
     def __len__(self):
-        return len(User.User_all())
+        return len(User.user_all())
 
     def save(self):
         super().save()
@@ -48,11 +48,11 @@ class DeliveryArea(models.Model):
     area_name = models.CharField(max_length=150)
 
     @staticmethod
-    def Area_all():
+    def area_all():
         return DeliveryArea.objects.all()
 
     def __len__(self):
-        return len(DeliveryArea.Area_all())
+        return len(DeliveryArea.area_all())
 
 
 class Store(models.Model):
@@ -61,8 +61,8 @@ class Store(models.Model):
         (1, '月结'),
     )
     area_level = []
-    for i in DeliveryArea.Area_all():
-        area_level.append([i.id, i.area_name])
+    # for i in DeliveryArea.area_all():
+    #     area_level.append([i.id, i.area_name])
 
     store_id = models.AutoField(primary_key=True)
     store_name = models.CharField(max_length=155, default=0)
@@ -73,11 +73,11 @@ class Store(models.Model):
     store_deposit = models.IntegerField(default=0)
 
     @staticmethod
-    def Store_all():
+    def store_all():
         return Store.objects.all()
 
     def __len__(self):
-        return len(Store.Store_all())
+        return len(Store.store_all())
 
 
 class CustomerProfile(models.Model):
@@ -110,14 +110,14 @@ class Order(models.Model):
     order_id = models.AutoField(primary_key=True)
     create_time = models.DateField(auto_now_add=True)
     shop_id = models.IntegerField(blank=False)
-    user_id = models.CharField(blank=False)
+    user_id = models.CharField(max_length=155)
     area_id = models.IntegerField(blank=False)
     receive_time = models.TimeField(blank=True)
     is_pay = models.IntegerField(default = 1)
     pay_from = models.IntegerField(default = '未支付')
     goods_money = models.DecimalField(max_digits=5, decimal_places=2)
     order_remarks = models.TextField(default='无')
-    done_time = models.DateTimeFielda
+    done_time = models.DateTimeField()
 
 
 class OrderDetail(models.Model):
@@ -126,7 +126,6 @@ class OrderDetail(models.Model):
     goods_num = models.IntegerField()
     goods_price = models.DecimalField(max_digits=3,decimal_places=2)
     total_price = models.DecimalField(max_digits=5,decimal_places=2)
-
 
 
 class Session(models.Model):

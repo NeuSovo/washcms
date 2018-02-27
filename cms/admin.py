@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile,Store
+from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea
 # Register your models here.
 
 
@@ -94,6 +94,15 @@ class StoreAdmin(admin.ModelAdmin):
     # raw_id_fields = ('',)
     # readonly_fields = ('',)
     # search_fields = ('',)
+class AreaAdmin(admin.ModelAdmin):
+    '''
+        Admin View for Area
+    '''
+    list_display = ('id','area_name',)
+
+
+
+admin.site.register(DeliveryArea, AreaAdmin)
 
 admin.site.register(Store, StoreAdmin)
 admin.site.register(User, UserAdmin)

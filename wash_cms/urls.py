@@ -19,9 +19,9 @@ from django.urls import path
 from cms.views import *
 urlpatterns = [
     path('',index),
-    url(r'^jet/', include('jet.urls', 'jet')),  # Django JET URLS
-    url(r'^jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),  # Django JET dashboard URLS
-    url(r'admin/', admin.site.urls),
+    # url(r'^jet/', include('jet.urls', 'jet')),  # Django JET URLS
+    # url(r'^jet/dashboard/', include('jet.dashboard.urls', 'jet-dashboard')),  # Django JET dashboard URLS
+    path('admin/', admin.site.urls),
     # path('auth/rreg',re_register_view),# Drop
 
     path('auth/reg',register_view),
