@@ -61,8 +61,8 @@ class Store(models.Model):
         (1, '月结'),
     )
     area_level = []
-    for i in DeliveryArea.area_all():
-        area_level.append([i.id, i.area_name])
+    # for i in DeliveryArea.area_all():
+    #     area_level.append([i.id, i.area_name])
 
     store_id = models.AutoField(primary_key=True)
     store_name = models.CharField(max_length=155, default=0)
