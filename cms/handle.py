@@ -349,9 +349,28 @@ class StoreManager(object):
             return None
 
     def setprice_store(self):
-              
-        pass
+        price_list = self.data['goods_price']
+        user = get_user(wckey=self.wckey)
+        store_id= self.data['store_id']
+        store_goods = StoreGoods.objects.filter(store_id=store_id)
 
+        store_goods_list = [i.goods_id for i in store_goods]
+
+        for goods in price_list:
+            goods_id = goods['goods_id']
+            goods_price = goods['goods_price']
+            goods_stock = goods['goods_stock']
+            goods_info = GoodsManager.get_goods_info(goods_id=goods['goods_id'])
+            if goods['goods_id'] not in store_goods_list:
+                StoreGoods(store_id=store_id,goods_id=goods_id,goods_name=goods_info['goods_name'],
+                            goods_price=goods_price,goods_stock=goods_stock,
+                            goods_spec=goods_info['spec']).save()
+            else:
+                this_goods = StoreGoods.objects.get(goods_id=goods_id)
+                this_goods.goods_price = goods_price
+                this_goods.save()
+
+        return {'message':'ok'}
 
     @staticmethod
     def all_store():
@@ -368,12 +387,22 @@ class StoreManager(object):
 
         return {'message': 'ok', 'info': all_store_list}
 
+    @staticmethod
+    def get_store_price(srore_id):
+        all_store_price = StoreGoods.objects.filter(store_id=srore_id)
+        result = []
+        for i in all_store_price:
+            result.append({'id':i.goods_id,'spec':i.goods_spec,'price':i.goods_price})
+
+        return result
+
     def reply(self):
         method_name = self.action + '_store'
         try:
             method = getattr(self, method_name)
             return method()
-        except:
+        except Exception as e:
+            print (e)
             return StoreManager.all_store()
 
     def __str__(self):
@@ -508,6 +537,12 @@ class GoodsManager(object):
 
         return {'message': 'ok','info': return_list}
 
+    @staticmethod
+    def get_goods_info(goods_id):
+        goods = Goods.objects.get(goods_id=goods_id)
+        return {'goods_id': goods.goods_id,'goods_name': goods.goods_name,'goods_spec': goods.goods_spec,
+                                'goods_stock': goods.goods_stock,'is_recover': goods.is_recover}
+
     def reply(self):
         method_name = self.action + '_goods'
         try:
@@ -521,6 +556,7 @@ class OrderManager(object):
     def __init__(self,postdata):
         self.data = postdata
         self.wckey = postdata['base_req']['wckey']
+        self.order_id = OrderManager.gen_order_id()
 
     @staticmethod
     def gen_order_id():
@@ -531,14 +567,40 @@ class OrderManager(object):
     def save_order(self):
         user = get_user(wckey=self.wckey)
    
-        order_id = OrderManager.gen_order_id()
+        order_id = self.order_id
         store_id = CustomerUserManager.get_user_store_id(user)
+        self.store_id = store_id
         area_id = StoreManager.get_store_area_id(store_id=store_id)
         remarks = self.data['remarks']
+        total_price = self.save_order_detail()
+        new_order = Order(order_id=order_id,store_id=store_id,user_id=user.wk,area_id=area_id,
+                        order_total_price=total_price,remarks=remarks)
+        new_order.save()
 
+    def save_order_detail(self):
+        pack_goods = self.data['pack_goods']
+        order_all_goods = []
+        # goods_price = StoreManager.get_store_price(self.store_id)
+        order_price = 0
+        for i in pack_goods:
+            goods_id = i['goods_id']
+            goods_count = i['goods_count']
+            this_goods = StoreGoods.objects.get(goods_id=goods_id,store_id=self.store_id)
+            goods_price = this_goods.price * this_goods.spec
+            total_price = goods_price * goods_count
+            order_price += total_price
+            order_all_goods.append(OrderDetail(self,order_id,goods_id,goods_count,goods_price,total_price))
+            # pass
+
+        OrderDetail.objects.bull_create(order_all_goods)
+
+        return order_price
+
+    
+    def get_old_detail(self):
         pass
 
-    def save_order_detail(self,order_id):
-        goods = self.data['goods']
-        for _ in goods:
-            OrderDetail()
+    def set_order_status(self):
+        pass
+
+    

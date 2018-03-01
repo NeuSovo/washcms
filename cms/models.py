@@ -99,13 +99,22 @@ class Goods(models.Model):
     )
     goods_id = models.AutoField(primary_key=True)
     goods_name = models.CharField(max_length=155,default='not name')
-    goods_spec = models.CharField(max_length=20,default='箱')
+    goods_spec = models.IntegerField(default=1)
     goods_stock = models.IntegerField(default=0)
-    is_recover = models.IntegerField(default=0,choices=recover_level)
+    is_recover = models.IntegerField(default=0, choices=recover_level)
 
     @staticmethod
     def goods_all():
         return Goods.objects.all()
+
+
+class StoreGoods(models.Model):
+    store_id = models.IntegerField()
+    goods_id = models.IntegerField()
+    goods_name = models.CharField(max_length=155)
+    goods_stock = models.IntegerField(default=0)
+    goods_spec = models.IntegerField(default=1)
+    goods_price = models.DecimalField(max_digits=5, decimal_places=2)
 
 
 class Order(models.Model):
@@ -123,7 +132,7 @@ class Order(models.Model):
     receive_time = models.TimeField(blank=True)
     is_pay = models.IntegerField(default=1)
     pay_from = models.IntegerField(default='未支付')
-    goods_money = models.DecimalField(max_digits=5, decimal_places=2)
+    order_total_price = models.DecimalField(max_digits=5, decimal_places=2)
     order_remarks = models.CharField(max_length=155)
     done_time = models.DateTimeField(blank=True)
 
@@ -131,7 +140,7 @@ class Order(models.Model):
 class OrderDetail(models.Model):
     order_id = models.IntegerField()
     goods_id = models.IntegerField()
-    goods_num = models.IntegerField()
+    goods_count = models.IntegerField()
     goods_price = models.DecimalField(max_digits=3,decimal_places=2)
     total_price = models.DecimalField(max_digits=5,decimal_places=2)
 

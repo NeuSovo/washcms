@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea
+from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea,Goods
 # Register your models here.
 
 
@@ -101,9 +101,13 @@ class AreaAdmin(admin.ModelAdmin):
     list_display = ('id','area_name',)
 
 
+class GoodsAdmin(admin.ModelAdmin):
 
+    list_display = ('goods_name','goods_spec','goods_stock','is_recover')
+
+
+admin.site.register(Goods, GoodsAdmin)
 admin.site.register(DeliveryArea, AreaAdmin)
-
 admin.site.register(Store, StoreAdmin)
 admin.site.register(User, UserAdmin)
 admin.site.register(CodeRecord, CodeRecordAdmin)
