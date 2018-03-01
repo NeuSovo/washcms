@@ -170,8 +170,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'washcms',
         'USER': 'root',
-        'PASSWORD': '19970326.',
-        'HOST': '123.206.19.145',
+        'PASSWORD': '123456',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
     }
 }

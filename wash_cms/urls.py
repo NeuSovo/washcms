@@ -30,7 +30,8 @@ urlpatterns = [
     path('boss/area',change_deliveryarea_view),
     path('boss/store',change_storeinfo_view),
     path('boss/setuser',set_user_type_view),
-    
+
+    path('goods',change_goods_view),
     path('user/bind',bind_user_view)
 
 ]
