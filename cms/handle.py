@@ -388,11 +388,11 @@ class StoreManager(object):
         return {'message': 'ok', 'info': all_store_list}
 
     @staticmethod
-    def get_store_price(srore_id):
-        all_store_price = StoreGoods.objects.filter(store_id=srore_id)
+    def get_store_price(store_id):
+        all_store_price = StoreGoods.objects.filter(store_id=store_id)
         result = []
         for i in all_store_price:
-            result.append({'id':i.goods_id,'spec':i.goods_spec,'price':i.goods_price})
+            result.append({'id': i.goods_id,'spec': i.goods_spec,'price': i.goods_price})
 
         return result
 
@@ -402,7 +402,7 @@ class StoreManager(object):
             method = getattr(self, method_name)
             return method()
         except Exception as e:
-            print (e)
+            app.info(str(e))
             return StoreManager.all_store()
 
     def __str__(self):
@@ -553,10 +553,10 @@ class GoodsManager(object):
 
 
 class OrderManager(object):
-    def __init__(self,postdata):
+    def __init__(self, action, postdata):
         self.data = postdata
+        self.action = action
         self.wckey = postdata['base_req']['wckey']
-        self.order_id = OrderManager.gen_order_id()
 
     @staticmethod
     def gen_order_id():
@@ -566,18 +566,18 @@ class OrderManager(object):
 
     def save_order(self):
         user = get_user(wckey=self.wckey)
-   
-        order_id = self.order_id
+        order_id = OrderManager.gen_order_id()
         store_id = CustomerUserManager.get_user_store_id(user)
-        self.store_id = store_id
         area_id = StoreManager.get_store_area_id(store_id=store_id)
         remarks = self.data['remarks']
-        total_price = self.save_order_detail()
-        new_order = Order(order_id=order_id,store_id=store_id,user_id=user.wk,area_id=area_id,
-                        order_total_price=total_price,remarks=remarks)
-        new_order.save()
+        total_price = self.save_order_detail(order_id,store_id)
 
-    def save_order_detail(self):
+        new_order = Order(order_id=order_id,store_id=store_id,user_id=user.wk,area_id=area_id,
+                        order_total_price=total_price,order_remarks=remarks)
+        new_order.save()
+        return {'message':'ok','order_id':order_id}
+
+    def save_order_detail(self,order_id,store_id):
         pack_goods = self.data['pack_goods']
         order_all_goods = []
         # goods_price = StoreManager.get_store_price(self.store_id)
@@ -585,22 +585,32 @@ class OrderManager(object):
         for i in pack_goods:
             goods_id = i['goods_id']
             goods_count = i['goods_count']
-            this_goods = StoreGoods.objects.get(goods_id=goods_id,store_id=self.store_id)
-            goods_price = this_goods.price * this_goods.spec
+            this_goods = StoreGoods.objects.get(goods_id=goods_id, store_id=store_id)
+            goods_price = this_goods.goods_price * this_goods.goods_spec
             total_price = goods_price * goods_count
             order_price += total_price
-            order_all_goods.append(OrderDetail(self,order_id,goods_id,goods_count,goods_price,total_price))
+            order_all_goods.append(OrderDetail(order_id=order_id, goods_id=goods_id, 
+                        goods_count=goods_count, goods_price=goods_price, total_price=total_price))
             # pass
 
-        OrderDetail.objects.bull_create(order_all_goods)
+        OrderDetail.objects.bulk_create(order_all_goods)
 
         return order_price
 
-    
     def get_old_detail(self):
         pass
 
     def set_order_status(self):
         pass
 
-    
+    def new_order(self):
+        return self.save_order()
+
+    def reply(self):
+        method_name = self.action + '_order'
+        # try:
+        method = getattr(self, method_name)
+        return method()
+        # except Exception as e:
+        #     print(e)
+        #     return {'message': 'failed'}

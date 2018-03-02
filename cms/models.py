@@ -114,35 +114,40 @@ class StoreGoods(models.Model):
     goods_name = models.CharField(max_length=155)
     goods_stock = models.IntegerField(default=0)
     goods_spec = models.IntegerField(default=1)
-    goods_price = models.DecimalField(max_digits=5, decimal_places=2)
+    goods_price = models.DecimalField(max_digits=8, decimal_places=3)
 
 
 class Order(models.Model):
     pay_from_level = (
-        ('0','现金'),
-        ('1','微信'),
-        ('2','月结'),
+        (0,'现金'),
+        (1,'微信'),
+        (2,'月结'),
+        (3,'未支付')
     )
+    receive_level = (
+        (0,'已送到'),
+        (1,'未送到')
+        )
 
-    order_id = models.IntegerField(primary_key=True)
-    create_time = models.DateField(auto_now_add=True)
-    shop_id = models.IntegerField(blank=False)
+    order_id = models.BigIntegerField(primary_key=True)
+    create_time = models.DateTimeField(auto_now_add=True)
+    store_id = models.IntegerField(blank=False)
     user_id = models.CharField(max_length=155)
     area_id = models.IntegerField(blank=False)
-    receive_time = models.TimeField(blank=True)
+    is_receive = models.IntegerField(choices=receive_level,default=1)
     is_pay = models.IntegerField(default=1)
-    pay_from = models.IntegerField(default='未支付')
-    order_total_price = models.DecimalField(max_digits=5, decimal_places=2)
+    pay_from = models.IntegerField(choices=pay_from_level,default=3)
+    order_total_price = models.DecimalField(max_digits=8, decimal_places=3)
     order_remarks = models.CharField(max_length=155)
-    done_time = models.DateTimeField(blank=True)
+    done_time = models.DateTimeField(auto_now=True)
 
 
 class OrderDetail(models.Model):
-    order_id = models.IntegerField()
+    order_id = models.BigIntegerField()
     goods_id = models.IntegerField()
     goods_count = models.IntegerField()
-    goods_price = models.DecimalField(max_digits=3,decimal_places=2)
-    total_price = models.DecimalField(max_digits=5,decimal_places=2)
+    goods_price = models.DecimalField(max_digits=8,decimal_places=3)
+    total_price = models.DecimalField(max_digits=8,decimal_places=3)
 
 
 class Session(models.Model):

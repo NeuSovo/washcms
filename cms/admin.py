@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea,Goods
+from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea,Goods,Order,OrderDetail
 # Register your models here.
 
 
@@ -105,7 +105,18 @@ class GoodsAdmin(admin.ModelAdmin):
 
     list_display = ('goods_name','goods_spec','goods_stock','is_recover')
 
+class OrderDetailAdmin(admin.ModelAdmin):
+    model = OrderDetail
+    verbose_name = '商家用户信息'
+    can_delete = True
 
+
+class OrderAdmin(admin.ModelAdmin):
+
+    list_display = ('create_time','is_receive','is_pay','pay_from','order_total_price')
+
+
+admin.site.register(Order,OrderAdmin)
 admin.site.register(Goods, GoodsAdmin)
 admin.site.register(DeliveryArea, AreaAdmin)
 admin.site.register(Store, StoreAdmin)

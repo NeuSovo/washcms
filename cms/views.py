@@ -3,15 +3,16 @@ import json
 from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager, 
-                        usercheck,SetUserManager,CustomerUserManager,GoodsManager)
+                        usercheck,SetUserManager,CustomerUserManager,GoodsManager,
+                        OrderManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
 def parse_info(data):
     """
-    parser_info:
-    parmer must be a dict
-    parse dict data to json,and return HttpResponse
+    :parser_info:
+    :parmer must be a dict
+    :parse dict data to json,and return HttpResponse
     """
     return HttpResponse(json.dumps(data, indent=4),
                         content_type="application/json")
@@ -181,7 +182,7 @@ def change_goods_view(request):
     response = parse_info(result.reply())
 
     return response
-    
+
 
 @usercheck(user_type=4)
 def bind_user_view(request):
@@ -192,4 +193,18 @@ def bind_user_view(request):
 
     return response
 
+
+@usercheck(user_type=3)
+def order_view(request):
+    body = json.loads(request.body)
+
+    if 'action' not in request.GET:
+        action = ''
+    else:
+        action = request.GET['action']
+
+    result = OrderManager(action=action,postdata=body)
+    response = parse_info(result.reply())
+
+    return response
 
