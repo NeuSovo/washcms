@@ -364,7 +364,7 @@ class StoreManager(object):
             if goods['goods_id'] not in store_goods_list:
                 StoreGoods(store_id=store_id,goods_id=goods_id,goods_name=goods_info['goods_name'],
                             goods_price=goods_price,goods_stock=goods_stock,
-                            goods_spec=goods_info['spec']).save()
+                            goods_spec=goods_info['goods_spec']).save()
             else:
                 this_goods = StoreGoods.objects.get(goods_id=goods_id)
                 this_goods.goods_price = goods_price
