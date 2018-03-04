@@ -32,6 +32,7 @@ urlpatterns = [
     path('boss/setuser',set_user_type_view),
 
     path('goods',change_goods_view),
-    path('user/bind',bind_user_view)
+    path('user/bind',bind_user_view),
+    path('user/order',order_view),
 
 ]
