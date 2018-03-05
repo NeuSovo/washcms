@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 
 from cms.models import *
 from cms.apps import APIServerErrorCode as ASEC
+
 # from cms.views import *
 
 app = logging.getLogger('app.custom')
@@ -76,6 +77,7 @@ def usercheck(user_type=-1):
                 return parse_info({'message': 'user_type failed'})
 
         return inner_wrapper
+
     return wrapper
 
 
@@ -210,7 +212,8 @@ class LoginManager(object):
 
         return {'name': name,
                 'avatar_links': avatar_links,
-                'qrcod': LoginManager.gen_base64(user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
+                'qrcod': LoginManager.gen_base64(
+                    user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
 
     def reply(self):
 
@@ -275,8 +278,6 @@ class AreaManager(object):
                 'info': all_area_list}
 
     def reply(self):
-        user = get_user(self.wckey)
-
         method_name = self.action + '_area'
         try:
             method = getattr(self, method_name)
@@ -350,8 +351,8 @@ class StoreManager(object):
 
     def setprice_store(self):
         price_list = self.data['goods_price']
-        user = get_user(wckey=self.wckey)
-        store_id= self.data['store_id']
+        # user = get_user(wckey=self.wckey)
+        store_id = self.data['store_id']
         store_goods = StoreGoods.objects.filter(store_id=store_id)
 
         store_goods_list = [i.goods_id for i in store_goods]
@@ -362,15 +363,15 @@ class StoreManager(object):
             goods_stock = goods['goods_stock']
             goods_info = GoodsManager.get_goods_info(goods_id=goods['goods_id'])
             if goods['goods_id'] not in store_goods_list:
-                StoreGoods(store_id=store_id,goods_id=goods_id,goods_name=goods_info['goods_name'],
-                            goods_price=goods_price,goods_stock=goods_stock,
-                            goods_spec=goods_info['goods_spec']).save()
+                StoreGoods(store_id=store_id, goods_id=goods_id, goods_name=goods_info['goods_name'],
+                           goods_price=goods_price, goods_stock=goods_stock,
+                           goods_spec=goods_info['goods_spec']).save()
             else:
                 this_goods = StoreGoods.objects.get(goods_id=goods_id)
                 this_goods.goods_price = goods_price
                 this_goods.save()
 
-        return {'message':'ok'}
+        return {'message': 'ok'}
 
     @staticmethod
     def all_store():
@@ -392,7 +393,7 @@ class StoreManager(object):
         all_store_price = StoreGoods.objects.filter(store_id=store_id)
         result = []
         for i in all_store_price:
-            result.append({'id': i.goods_id,'spec': i.goods_spec,'price': i.goods_price})
+            result.append({'id': i.goods_id, 'spec': i.goods_spec, 'price': i.goods_price})
 
         return result
 
@@ -471,7 +472,7 @@ class CustomerUserManager(object):
 
         user.user_type = 3
         user.save()
-        
+
         return {'message': 'ok'}
 
     @staticmethod
@@ -480,6 +481,7 @@ class CustomerUserManager(object):
             store_user = CustomerProfile.objects.get(wk=user)
             return store_user.store_id
         except Exception as e:
+            app.error(str(e))
             return None
 
     def reply(self):
@@ -503,19 +505,20 @@ class GoodsManager(object):
         all
     TODO 完善
     """
-    def __init__(self, postdata,action = all):
+
+    def __init__(self, postdata, action=all):
         self.data = postdata
         self.action = action
-        
+
     def add_goods(self):
         goods_name = self.data['name']
         goods_spec = self.data['spec']
         goods_stock = self.data['stock']
         is_recover = self.data['recover']
-        new_goods = Goods(goods_name=goods_name,goods_spec=goods_spec,goods_stock=goods_stock,is_recover=is_recover)
+        new_goods = Goods(goods_name=goods_name, goods_spec=goods_spec, goods_stock=goods_stock, is_recover=is_recover)
         new_goods.save()
 
-        return {'message': 'ok','id': new_goods.goods_id}
+        return {'message': 'ok', 'id': new_goods.goods_id}
 
     def del_goods(self):
         goods_id = self.data['id']
@@ -532,23 +535,24 @@ class GoodsManager(object):
 
         return_list = []
         for i in goods_all:
-            return_list.append({'goods_id': i.goods_id,'goods_name': i.goods_name,'goods_spec': i.goods_spec,
-                                'goods_stock': i.goods_stock,'is_recover': i.is_recover})
+            return_list.append({'goods_id': i.goods_id, 'goods_name': i.goods_name, 'goods_spec': i.goods_spec,
+                                'goods_stock': i.goods_stock, 'is_recover': i.is_recover})
 
-        return {'message': 'ok','info': return_list}
+        return {'message': 'ok', 'info': return_list}
 
     @staticmethod
     def get_goods_info(goods_id):
         goods = Goods.objects.get(goods_id=goods_id)
-        return {'goods_id': goods.goods_id,'goods_name': goods.goods_name,'goods_spec': goods.goods_spec,
-                                'goods_stock': goods.goods_stock,'is_recover': goods.is_recover}
+        return {'goods_id': goods.goods_id, 'goods_name': goods.goods_name, 'goods_spec': goods.goods_spec,
+                'goods_stock': goods.goods_stock, 'is_recover': goods.is_recover}
 
     def reply(self):
         method_name = self.action + '_goods'
         try:
             method = getattr(self, method_name)
             return method()
-        except :
+        except Exception as e:
+            app.info(str(e))
             return GoodsManager.all_goods()
 
 
@@ -570,14 +574,14 @@ class OrderManager(object):
         store_id = CustomerUserManager.get_user_store_id(user)
         area_id = StoreManager.get_store_area_id(store_id=store_id)
         remarks = self.data['remarks']
-        total_price = self.save_order_detail(order_id,store_id)
+        total_price = self.save_order_detail(order_id, store_id)
 
-        new_order = Order(order_id=order_id,store_id=store_id,user_id=user.wk,area_id=area_id,
-                        order_total_price=total_price,order_remarks=remarks)
+        new_order = Order(order_id=order_id, store_id=store_id, user_id=user.wk, area_id=area_id,
+                          order_total_price=total_price, order_remarks=remarks)
         new_order.save()
-        return {'message':'ok','order_id':order_id}
+        return {'message': 'ok', 'order_id': order_id}
 
-    def save_order_detail(self,order_id,store_id):
+    def save_order_detail(self, order_id, store_id):
         pack_goods = self.data['pack_goods']
         order_all_goods = []
         # goods_price = StoreManager.get_store_price(self.store_id)
@@ -589,15 +593,16 @@ class OrderManager(object):
             goods_price = this_goods.goods_price * this_goods.goods_spec
             total_price = goods_price * goods_count
             order_price += total_price
-            order_all_goods.append(OrderDetail(order_id=order_id, goods_id=goods_id, 
-                        goods_count=goods_count, goods_price=goods_price, total_price=total_price))
+            order_all_goods.append(OrderDetail(order_id=order_id, goods_id=goods_id,
+                                               goods_count=goods_count, goods_price=goods_price,
+                                               total_price=total_price))
             # pass
 
         OrderDetail.objects.bulk_create(order_all_goods)
 
         return order_price
 
-    def get_old_detail(self):
+    def get_older_detail(self):
         pass
 
     def set_order_status(self):

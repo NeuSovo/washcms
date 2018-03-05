@@ -35,7 +35,7 @@ class APIServerErrorCode(object):
 
             return CodeMessage[errorCode]
         else:
-            return  "error code not defined"
+            return "error code not defined"
 
 CodeMessage = {
     APIServerErrorCode.ERROR_PARAME          :'Request Error',
