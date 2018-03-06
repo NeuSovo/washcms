@@ -23,7 +23,7 @@ app = logging.getLogger('app.custom')
 def parse_info(data):
     """
     parser_info:
-    parmer must be a dict
+    param must be a dict
     parse dict data to json,and return HttpResponse
     """
     return HttpResponse(json.dumps(data, indent=4),
@@ -183,7 +183,6 @@ class LoginManager(object):
     def __str__(self):
         return self.wckey
 
-    #
     def check(self, sign, checktime):
         if time.time() - int(checktime) > 30:
             return False
@@ -206,25 +205,91 @@ class LoginManager(object):
         tmp = base64.b64encode(str(txt).encode('utf-8'))
         return str(tmp, 'utf-8')
 
-    def get_info(self, user):
-        name = user.nick_name
-        avatar_links = user.avatar_links
-
-        return {'name': name,
-                'avatar_links': avatar_links,
-                'qrcod': LoginManager.gen_base64(
-                    user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
-
     def reply(self):
 
         user = get_user(self.wckey)
 
-        user_info = self.get_info(user)
+        user_info = UserManager.get_user_info(user)
 
         return {'code': ASEC.LOGIN_SUCCESS,
                 'user_type': user.user_type,
                 'info': user_info,
                 'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
+
+
+class UserManager(object):
+
+    @staticmethod
+    def get_user(wckey=None):
+        """
+            get user only id,
+            and return None or User
+        """
+        if None:
+            return None
+
+        user_key = Session.objects.get(session_data=wckey)
+        user = User.objects.get(wk=user_key.session_key)
+
+        return user
+
+    @staticmethod
+    def get_user_info(user):
+        """
+        :param user:
+        :return: name,avatar_links
+                and base64(user.wk)
+        """
+        name = user.nick_name
+        avatar_links = user.avatar_links
+
+        return {'name': name,
+                'avatar_links': avatar_links,
+                'qrcode': LoginManager.gen_base64(
+                    user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
+
+    @staticmethod
+    def get_user_store_id(user):
+        """
+        User_type must be 3
+        :param user:
+        :return:
+        """
+        return CustomerProfile.objects.get(wk=user).store_id
+
+    @staticmethod
+    def get_user_area_id(user):
+        """
+        User_type must be 2
+        :param user:
+        :return:
+        """
+        return CourierProfile.objects.get(wk=user).area_id
+
+    @staticmethod
+    def set_user_profile(user,profile):
+        """
+        :param user:
+        :param profile:
+        :return:
+        """
+        pass
+
+    @staticmethod
+    def set_user_store_profile(user):
+        """
+        only user type is 3
+        """
+        pass
+
+    @staticmethod
+    def set_user_type(user, set_type=1, area_id=-1):
+        """
+        set_type = 0,1,2
+        """
+        pass
+
+    pass
 
 
 class AreaManager(object):
@@ -282,7 +347,8 @@ class AreaManager(object):
         try:
             method = getattr(self, method_name)
             return method()
-        except:
+        except Exception as e:
+            app.info(str(e))
             return AreaManager.all_area()
 
 
@@ -361,7 +427,8 @@ class StoreManager(object):
             goods_id = goods['goods_id']
             goods_price = goods['goods_price']
             goods_stock = goods['goods_stock']
-            goods_info = GoodsManager.get_goods_info(goods_id=goods['goods_id'])
+            goods_info = GoodsManager.get_goods_info(
+                goods_id=goods['goods_id'])
             if goods['goods_id'] not in store_goods_list:
                 StoreGoods(store_id=store_id, goods_id=goods_id, goods_name=goods_info['goods_name'],
                            goods_price=goods_price, goods_stock=goods_stock,
@@ -393,7 +460,8 @@ class StoreManager(object):
         all_store_price = StoreGoods.objects.filter(store_id=store_id)
         result = []
         for i in all_store_price:
-            result.append({'id': i.goods_id, 'spec': i.goods_spec, 'price': i.goods_price})
+            result.append(
+                {'id': i.goods_id, 'spec': i.goods_spec, 'price': i.goods_price})
 
         return result
 
@@ -515,7 +583,8 @@ class GoodsManager(object):
         goods_spec = self.data['spec']
         goods_stock = self.data['stock']
         is_recover = self.data['recover']
-        new_goods = Goods(goods_name=goods_name, goods_spec=goods_spec, goods_stock=goods_stock, is_recover=is_recover)
+        new_goods = Goods(goods_name=goods_name, goods_spec=goods_spec,
+                          goods_stock=goods_stock, is_recover=is_recover)
         new_goods.save()
 
         return {'message': 'ok', 'id': new_goods.goods_id}
@@ -564,7 +633,8 @@ class OrderManager(object):
 
     @staticmethod
     def gen_order_id():
-        order_id = datetime.now().strftime("%Y%m%d%H%M%S") + str(random.randint(1000, 9999))
+        order_id = datetime.now().strftime("%Y%m%d%H%M%S") + \
+            str(random.randint(1000, 9999))
 
         return order_id
 
@@ -589,7 +659,8 @@ class OrderManager(object):
         for i in pack_goods:
             goods_id = i['goods_id']
             goods_count = i['goods_count']
-            this_goods = StoreGoods.objects.get(goods_id=goods_id, store_id=store_id)
+            this_goods = StoreGoods.objects.get(
+                goods_id=goods_id, store_id=store_id)
             goods_price = this_goods.goods_price * this_goods.goods_spec
             total_price = goods_price * goods_count
             order_price += total_price
