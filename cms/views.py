@@ -3,7 +3,7 @@ import json
 from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager, 
-                        usercheck,SetUserManager,CustomerUserManager,GoodsManager,
+                        usercheck,EmployeeManager,CustomerUserManager,GoodsManager,
                         OrderManager)
 from cms.apps import APIServerErrorCode as ASEC
 
@@ -44,7 +44,8 @@ def register_view(request):
         response.status_code = 400
         return response
 
-    wk = WechatSdk(request.GET['code'])
+    # update 2018/03/07
+    wk = WechatSdk(request.GET['code'])#,request.GET['name'],request.GET['url'])
     if not wk.get_openid():
         result['code'] = ASEC.WRONG_PARAME
         result['message'] = ASEC.getMessage(ASEC.WRONG_PARAME)
@@ -76,7 +77,7 @@ def re_register_view(request):
 
 
 @usercheck()
-def login_view(request):
+def login_view(request, user):
     """
     view for login
     Accept User Cookies and return user info,
@@ -93,11 +94,11 @@ def login_view(request):
     result = {}
     body = json.loads(request.body)
 
-    wckey = body['base_req']['wckey']
-    user = LoginManager(wckey=wckey)
-    if user.check(sign=body['sign'],
-                  checktime=body['time']):
-        result = user.reply()
+    # wckey = body['base_req']['wckey']
+    login = LoginManager(user=user)
+    if login.check(sign=body['sign'],
+                   checktime=body['time']):
+        result = login.reply()
         response = parse_info(result)
 
         return response
@@ -110,7 +111,7 @@ def login_view(request):
 
 
 @usercheck(user_type=0)
-def change_deliveryarea_view(request):
+def change_deliveryarea_view(request, user):
     """
         add
         del
@@ -136,7 +137,7 @@ def change_deliveryarea_view(request):
 
 
 @usercheck(user_type=0)
-def change_storeinfo_view(request):
+def change_store_view(request, user):
 
     body = json.loads(request.body)
 
@@ -152,23 +153,24 @@ def change_storeinfo_view(request):
     return response
 
 
-@usercheck(user_type = 0)
-def set_user_type_view(request):
-    """
-        Admin 0
-        peisong 1
-        kuguan 2
-    """
+@usercheck(user_type=0)
+def change_employee_view(request, user):
+
     body = json.loads(request.body)
 
-    result = SetUserManager(postdata = body)
+    if 'action' not in request.GET:
+        action = 'all'
+    else:
+        action = request.GET['action']
+
+    result = EmployeeManager(action=action, postdata=body)
     response = parse_info(result.reply())
 
     return response
 
 
 @usercheck(user_type=1)
-def change_goods_view(request):
+def change_goods_view(request, user):
     """
     """
     body = json.loads(request.body)
@@ -185,7 +187,7 @@ def change_goods_view(request):
 
 
 @usercheck(user_type=4)
-def bind_user_view(request):
+def bind_user_view(request, user):
     body = json.loads(request.body)
 
     result = CustomerUserManager(postdata = body)
@@ -195,7 +197,7 @@ def bind_user_view(request):
 
 
 @usercheck(user_type=3)
-def order_view(request):
+def order_view(request, user):
     body = json.loads(request.body)
 
     if 'action' not in request.GET:
@@ -203,7 +205,7 @@ def order_view(request):
     else:
         action = request.GET['action']
 
-    result = OrderManager(action=action,postdata=body)
+    result = OrderManager(action=action, postdata=body, user=user)
     response = parse_info(result.reply())
 
     return response
