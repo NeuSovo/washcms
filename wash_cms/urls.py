@@ -24,15 +24,15 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # path('auth/rreg',re_register_view),# Drop
 
-    path('auth/reg',register_view),
-    path('auth/login',login_view),
+    path('auth/reg', register_view),
+    path('auth/login', login_view),
 
-    path('boss/area',change_deliveryarea_view),
-    path('boss/store',change_storeinfo_view),
-    path('boss/setuser',set_user_type_view),
+    path('boss/area', change_deliveryarea_view),
+    path('boss/store', change_store_view),
+    path('boss/employee', change_employee_view),
 
-    path('goods',change_goods_view),
-    path('user/bind',bind_user_view),
-    path('user/order',order_view),
-
+    path('goods', change_goods_view),
+    path('user/bind', bind_user_view),
+    path('user/order', order_view),
+    # path('user/profile/get',)
 ]

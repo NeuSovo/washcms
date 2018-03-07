@@ -64,7 +64,7 @@ class Store(models.Model):
     # for i in DeliveryArea.area_all():
     #     area_level.append([i.id, i.area_name])
 
-    store_id = models.AutoField(primary_key=True)
+    store_id = models.IntegerField(primary_key=True)
     store_name = models.CharField(max_length=155, default=0)
     store_phone = models.IntegerField(default=0)
     store_addr = models.CharField(max_length=155)

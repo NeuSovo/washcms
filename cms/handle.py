@@ -8,8 +8,10 @@ import logging
 import requests
 from hashlib import sha256, md5
 
+from django.db.models import Q
 from django.conf import settings
 from django.shortcuts import HttpResponse
+
 from datetime import datetime, timedelta
 
 from cms.models import *
@@ -69,10 +71,10 @@ def usercheck(user_type=-1):
 
                 return parse_info(result)
 
-            user = User.objects.get(wk=user_key.session_key)
+            user = UserManager.get_user(wckey=wckey)
 
             if user_type == -1 or user.user_type <= user_type:
-                return func(request)
+                return func(request, user)
             else:
                 return parse_info({'message': 'user_type failed'})
 
@@ -133,6 +135,7 @@ class WechatSdk(object):
 
         self.openid = info['openid']
         self.wxsskey = info['session_key']
+        app.info(self.code + ':\t' + self.openid)
         return True
 
     def save_user(self):
@@ -176,18 +179,18 @@ class WechatSdk(object):
 class LoginManager(object):
     TOKEN = 'eq021n!3'
 
-    def __init__(self, wckey):
+    def __init__(self, user):
         super(LoginManager, self).__init__()
-        self.wckey = wckey
+        self.user = user
 
     def __str__(self):
-        return self.wckey
+        return self.user
 
     def check(self, sign, checktime):
         if time.time() - int(checktime) > 30:
             return False
 
-        to_check_str = str(checktime) + str(self.TOKEN)
+        to_check_str = str(self.TOKEN) + str(checktime)
         to_check_str = to_check_str.encode('utf-8')
 
         m = md5()
@@ -206,9 +209,7 @@ class LoginManager(object):
         return str(tmp, 'utf-8')
 
     def reply(self):
-
-        user = get_user(self.wckey)
-
+        user = self.user
         user_info = UserManager.get_user_info(user)
 
         return {'code': ASEC.LOGIN_SUCCESS,
@@ -245,15 +246,15 @@ class UserManager(object):
 
         return {'name': name,
                 'avatar_links': avatar_links,
-                'qrcode': LoginManager.gen_base64(
-                    user.wk)}  # 'https://pan.baidu.com/share/qrcode?url=' + self.gen_base64(user.wk)}
+                'user_type': user.user_type,
+                'qrcode': 'https://pan.baidu.com/share/qrcode?url=' + LoginManager.gen_base64(user.wk)}
 
     @staticmethod
     def get_user_store_id(user):
         """
         User_type must be 3
         :param user:
-        :return:
+        :return: Customer User store id
         """
         return CustomerProfile.objects.get(wk=user).store_id
 
@@ -262,39 +263,54 @@ class UserManager(object):
         """
         User_type must be 2
         :param user:
-        :return:
+        :return: Courie User Area id
         """
         return CourierProfile.objects.get(wk=user).area_id
 
     @staticmethod
-    def set_user_profile(user,profile):
+    def set_user_profile(user, profile):
         """
         :param user:
         :param profile:
         :return:
         """
-        pass
+        user.nick_name = profile['name']
+        user.avatar_links = profile['url']
+        user.save()
+
+        return user
 
     @staticmethod
-    def set_user_store_profile(user):
+    def set_user_store_profile(user, profile):
         """
         only user type is 3
         """
-        pass
+        store_id = UserManager.get_user_store_id(user)
+        store = Store.objects.get(store_id=store_id)
+
+        store.store_addr = profile['addr']
+        store.store_phone = profile['phone']
+        store.store_name = profile['name']
+        store.save()
+
+        return store
 
     @staticmethod
-    def set_user_type(user, set_type=1, area_id=-1):
+    def set_user_type(user, set_type, area_id=-1):
         """
         set_type = 0,1,2
         """
-        pass
+        if set_type == 2:
+            CourierProfile(wk=user, area_id=area_id).save()
 
-    pass
+        user.user_type = set_type
+        user.save()
+
+        return user
 
 
 class AreaManager(object):
     def __init__(self, action, postdata):
-        self.wckey = postdata['base_req']['wckey']
         self.action = action
         self.data = postdata
 
@@ -333,14 +349,18 @@ class AreaManager(object):
         """
             None
         """
-        allarea = DeliveryArea.area_all()
+        all_area = DeliveryArea.area_all()
         all_area_list = []
-        for _i in allarea:
+        for _i in all_area:
             all_area_list.append({'id': _i.id,
                                   'name': _i.area_name})
 
         return {'message': 'ok',
                 'info': all_area_list}
+
+    @staticmethod
+    def get_area_name(area_id=-1):
+        return DeliveryArea.objects.get(area_id=area_id).area_name
 
     def reply(self):
         method_name = self.action + '_area'
@@ -356,16 +376,31 @@ class StoreManager(object):
     """docstring for StoreManager"""
 
     def __init__(self, action, postdata):
-        super(StoreManager, self).__init__()
-        self.wckey = postdata['base_req']['wckey']
         self.action = action
         self.data = postdata
 
+    @staticmethod
+    def check_id_exist(store_id):
+        try:
+            Store.objects.get(store_id=store_id)
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def gen_store_id():
+        while True:
+            store_id = random.randint(10000, 99999)
+            if not StoreManager.check_id_exist(store_id):
+                return store_id
+
     def add_store(self):
         data = self.data
-        new_store = Store(store_name=data['name'],
-                          store_phone=data['phone'],
-                          store_addr=data['addr'],
+        store_id = StoreManager.gen_store_id()
+        new_store = Store(store_id=store_id,
+                          store_name=data['name'],
+                          # store_phone=data['phone'],
+                          # store_addr=data['addr'],
                           store_area=data['area'],
                           store_pay_type=data['pay_type'],
                           store_deposit=data['deposit'])
@@ -388,19 +423,17 @@ class StoreManager(object):
         try:
             this_store = Store.objects.get(store_id=data['id'])
             this_store.store_name = data['name']
-            this_store.store_phone = data['phone']
-            this_store.store_addr = data['addr']
+            # this_store.store_phone = data['phone']
+            # this_store.store_addr = data['addr']
             this_store.store_area = data['area']
             this_store.store_pay_type = data['pay_type']
             this_store.store_deposit = data['deposit']
             this_store.save()
-            new_info = {'id': this_store.store_id,
-                        'name': this_store.store_name,
-                        'phone': this_store.store_phone,
-                        'addr': this_store.store_addr,
-                        'area': this_store.store_area,
-                        'pay_type': this_store.store_pay_type,
+
+            new_info = {'id': this_store.store_id, 'name': this_store.store_name,
+                        'area': this_store.store_area, 'pay_type': this_store.store_pay_type,
                         'deposit': this_store.store_deposit}
+
             return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
             app.error(str(e) + '{}'.format(data))
@@ -427,12 +460,14 @@ class StoreManager(object):
             goods_id = goods['goods_id']
             goods_price = goods['goods_price']
             goods_stock = goods['goods_stock']
-            goods_info = GoodsManager.get_goods_info(
-                goods_id=goods['goods_id'])
+
+            goods_info = GoodsManager.get_goods_info(goods_id=goods['goods_id'])
+
             if goods['goods_id'] not in store_goods_list:
-                StoreGoods(store_id=store_id, goods_id=goods_id, goods_name=goods_info['goods_name'],
-                           goods_price=goods_price, goods_stock=goods_stock,
-                           goods_spec=goods_info['goods_spec']).save()
+                new_price = StoreGoods(store_id=store_id, goods_id=goods_id, goods_name=goods_info['goods_name'],
+                                       goods_price=goods_price, goods_stock=goods_stock,
+                                       goods_spec=goods_info['goods_spec'])
+                new_price.save()
             else:
                 this_goods = StoreGoods.objects.get(goods_id=goods_id)
                 this_goods.goods_price = goods_price
@@ -478,11 +513,19 @@ class StoreManager(object):
         return len(self.data)
 
 
-class SetUserManager(object):
-    def __init__(self, postdata):
+class EmployeeManager(object):
+    def __init__(self, action, postdata):
+        self.action = action
         self.data = postdata
 
-    def set_user(self, uid, set_type, area_id=-1):
+    def settype_employee(self):
+        uid = self.data['uid']
+        set_type = self.data['set_type']
+        if self.data['set_type'] == 2:
+            area_id = self.data['area_id']
+        else:
+            area_id = -1
+
         try:
             uid = base64.b64decode(uid.encode('utf-8'))
             uid = str(uid, 'utf-8')
@@ -492,28 +535,31 @@ class SetUserManager(object):
 
         try:
             user = User.objects.get(wk=uid)
-        except:
+        except Exception as e:
+            app.error(str(e))
             return {'message': 'failed'}
 
-        if set_type > 3:
-            return {'message': 'failed'}
-
-        if set_type == 2:
-            CourierProfile(wk=user, area_id=area_id).save()
-
-        user.user_type = set_type
-        user.save()
+        user = UserManager.set_user_type(user, set_type=set_type, area_id=area_id)
         return {'message': 'ok'}
 
-    def reply(self):
-        uid = self.data['uid']
-        set_type = self.data['set_type']
-        if self.data['set_type'] == 1:
-            area_id = self.data['area_id']
-        else:
-            area_id = -1
+    @staticmethod
+    def all_employee():
+        all_employee = User.objects.filter(Q(user_type=0) | Q(user_type=1) | Q(user_type=2))
 
-        return self.set_user(uid, set_type, area_id)
+        all_employee_list = []
+        for i in all_employee:
+            all_employee_list.append(UserManager.get_user_info(i))
+
+        return {'message': 'ok', 'employee_info': all_employee_list}
+
+    def reply(self):
+        method_name = self.action + '_employee'
+        try:
+            method = getattr(self, method_name)
+            return method()
+        except Exception as e:
+            app.info(str(e))
+            return EmployeeManager.all_employee()
 
 
 class CustomerUserManager(object):
@@ -522,15 +568,6 @@ class CustomerUserManager(object):
     def __init__(self, postdata):
         self.data = postdata
         self.wk = postdata['base_req']['wckey']
-
-    @staticmethod
-    def check_id_exist(store_id):
-        try:
-            Store.objects.get(store_id=store_id)
-            return True
-        except Exception as e:
-            app.info(str(e))
-            return False
 
     def bind(self, user, store_id):
         new_customer = CustomerProfile(wk=user, store_id=store_id)
@@ -543,19 +580,10 @@ class CustomerUserManager(object):
 
         return {'message': 'ok'}
 
-    @staticmethod
-    def get_user_store_id(user):
-        try:
-            store_user = CustomerProfile.objects.get(wk=user)
-            return store_user.store_id
-        except Exception as e:
-            app.error(str(e))
-            return None
-
     def reply(self):
         store_id = self.data['store_id']
 
-        if not CustomerUserManager.check_id_exist(store_id):
+        if not StoreManager.check_id_exist(store_id):
             return {'message': 'store_id not exist'}
 
         user = get_user(wckey=self.wk)
@@ -626,10 +654,10 @@ class GoodsManager(object):
 
 
 class OrderManager(object):
-    def __init__(self, action, postdata):
+    def __init__(self, action, postdata, user):
         self.data = postdata
         self.action = action
-        self.wckey = postdata['base_req']['wckey']
+        self.user = user
 
     @staticmethod
     def gen_order_id():
@@ -639,15 +667,16 @@ class OrderManager(object):
         return order_id
 
     def save_order(self):
-        user = get_user(wckey=self.wckey)
+        user = self.user
         order_id = OrderManager.gen_order_id()
-        store_id = CustomerUserManager.get_user_store_id(user)
+        store_id = UserManager.get_user_store_id(user)
         area_id = StoreManager.get_store_area_id(store_id=store_id)
         remarks = self.data['remarks']
         total_price = self.save_order_detail(order_id, store_id)
 
         new_order = Order(order_id=order_id, store_id=store_id, user_id=user.wk, area_id=area_id,
                           order_total_price=total_price, order_remarks=remarks)
+
         new_order.save()
         return {'message': 'ok', 'order_id': order_id}
 
