@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 import json
+import qrcode
+
+from django.utils.six import BytesIO
 from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager, 
                         usercheck,EmployeeManager,CustomerUserManager,GoodsManager,
                         OrderManager)
 from cms.apps import APIServerErrorCode as ASEC
-
 
 def parse_info(data):
     """
@@ -24,8 +26,21 @@ def index(request):
     return status_code : 203
     no content
     """
+    print (request.META)
     response = parse_info({'code': 9999})
     response.status_code = 203
+    return response
+
+
+def qcode_view(request, data):
+    img = qrcode.make(data)
+
+    buf = BytesIO()
+    img.save(buf)
+    image_stream = buf.getvalue()
+ 
+    response = HttpResponse(image_stream, content_type="image/png")
+
     return response
 
 
@@ -190,7 +205,7 @@ def change_goods_view(request, user):
 def bind_user_view(request, user):
     body = json.loads(request.body)
 
-    result = CustomerUserManager(postdata = body)
+    result = CustomerUserManager(postdata=body, user=user)
     response = parse_info(result.reply())
 
     return response

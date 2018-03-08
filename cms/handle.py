@@ -223,8 +223,8 @@ class UserManager(object):
     @staticmethod
     def get_user(wckey=None):
         """
-            get user only id,
-            and return None or User
+        :param wckey:
+        :return: user
         """
         if None:
             return None
@@ -247,7 +247,7 @@ class UserManager(object):
         return {'name': name,
                 'avatar_links': avatar_links,
                 'user_type': user.user_type,
-                'qrcode': 'https://pan.baidu.com/share/qrcode?url=' + LoginManager.gen_base64(user.wk)}
+                'qrcode': 'https://wash.cardwakefulness.cn/tools/' + LoginManager.gen_base64(user.wk)}
 
     @staticmethod
     def get_user_store_id(user):
@@ -539,7 +539,7 @@ class EmployeeManager(object):
             app.error(str(e))
             return {'message': 'failed'}
 
-        user = UserManager.set_user_type(user, set_type=set_type, area_id=area_id)
+        UserManager.set_user_type(user, set_type=set_type, area_id=area_id)
         return {'message': 'ok'}
 
     @staticmethod
@@ -565,11 +565,12 @@ class EmployeeManager(object):
 class CustomerUserManager(object):
     """docstring for BindUserManager"""
 
-    def __init__(self, postdata):
+    def __init__(self, postdata, user):
         self.data = postdata
-        self.wk = postdata['base_req']['wckey']
+        self.user = user
 
-    def bind(self, user, store_id):
+    def bind(self, store_id):
+        user = self.user
         new_customer = CustomerProfile(wk=user, store_id=store_id)
         new_customer.save()
         if user.user_type <= 3:
@@ -586,9 +587,7 @@ class CustomerUserManager(object):
         if not StoreManager.check_id_exist(store_id):
             return {'message': 'store_id not exist'}
 
-        user = get_user(wckey=self.wk)
-
-        return self.bind(user, store_id)
+        return self.bind(store_id)
 
 
 class GoodsManager(object):
@@ -644,7 +643,7 @@ class GoodsManager(object):
                 'goods_stock': goods.goods_stock, 'is_recover': goods.is_recover}
 
     def reply(self):
-        method_name = self.action + '_goods'
+        method_name = str(self.action) + '_goods'
         try:
             method = getattr(self, method_name)
             return method()
