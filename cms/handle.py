@@ -320,6 +320,15 @@ class AreaManager(object):
         self.action = action
         self.data = postdata
 
+    @staticmethod
+    def check_area_id_exist(area_id):
+        try:
+            DeliveryArea.objects.get(id=area_id)
+            return True
+        except Exception as e:
+            app.error(str(e))
+            return False
+
     def add_area(self):
         """
             post name
@@ -334,10 +343,12 @@ class AreaManager(object):
             post id
         """
         try:
-            DeliveryArea.objects.get(id=self.data['id']).delete()
+            to_delete = DeliveryArea.objects.get(id=self.data['id'])
+            # if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
+            #     return {'message': '请确保此区域下已没有配送员'}
         except Exception as e:
             app.info(str(e))
-            return {'message': 'delete failed'}
+            return {'message': '删除失败,可能成功'}
 
         return {'message': 'ok'}
 
@@ -470,8 +481,11 @@ class StoreManager(object):
             goods_info = GoodsManager.get_goods_info(goods_id=goods['goods_id'])
 
             if goods['goods_id'] not in store_goods_list:
-                new_price = StoreGoods(store_id=store_id, goods_id=goods_id, goods_name=goods_info['goods_name'],
-                                       goods_price=goods_price, goods_stock=goods_stock,
+                new_price = StoreGoods(store_id=store_id,
+                                       goods_id=goods_id,
+                                       goods_name=goods_info['goods_name'],
+                                       goods_price=goods_price,
+                                       goods_stock=goods_stock,
                                        goods_spec=goods_info['goods_spec'])
                 new_price.save()
             else:
@@ -529,6 +543,9 @@ class EmployeeManager(object):
         set_type = self.data['set_type']
         if self.data['set_type'] == 2:
             area_id = self.data['area_id']
+            if not AreaManager.check_area_id_exist(area_id):
+                return {'message': 'area_id error'}
+
         else:
             area_id = -1
 
