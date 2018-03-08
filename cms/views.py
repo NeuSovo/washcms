@@ -10,10 +10,11 @@ from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager,
                         OrderManager)
 from cms.apps import APIServerErrorCode as ASEC
 
+
 def parse_info(data):
     """
-    :parser_info:
-    :parmer must be a dict
+    parser_info:
+    :param data must be a dict
     :parse dict data to json,and return HttpResponse
     """
     return HttpResponse(json.dumps(data, indent=4),
@@ -26,13 +27,13 @@ def index(request):
     return status_code : 203
     no content
     """
-    print (request.META)
     response = parse_info({'code': 9999})
     response.status_code = 203
+
     return response
 
 
-def qcode_view(request, data):
+def qrcode_view(request, data):
     img = qrcode.make(data)
 
     buf = BytesIO()
@@ -60,7 +61,7 @@ def register_view(request):
         return response
 
     # update 2018/03/07
-    wk = WechatSdk(request.GET['code'])#,request.GET['name'],request.GET['url'])
+    wk = WechatSdk(request.GET['code'])  # request.GET['name'],request.GET['url'])
     if not wk.get_openid():
         result['code'] = ASEC.WRONG_PARAME
         result['message'] = ASEC.getMessage(ASEC.WRONG_PARAME)

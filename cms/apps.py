@@ -41,7 +41,7 @@ CodeMessage = {
     APIServerErrorCode.ERROR_PARAME          :'Request Error',
     APIServerErrorCode.WRONG_PARAME          :'Request Paramer Wrong',
     APIServerErrorCode.REG_SUCCESS           :'Register Success',
-    APIServerErrorCode.ALERADY_REG           :'User Alerady Register',
+    APIServerErrorCode.ALERADY_REG           :'User Already Register',
     APIServerErrorCode.FLUSH_SESSION_SUCCESS :'Flush Session Success',
     APIServerErrorCode.SESSION_EXPIRED       :'Session Expired',
     APIServerErrorCode.SESSION_NOT_WORK      :'Session Not Work',

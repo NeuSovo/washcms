@@ -90,6 +90,8 @@ class WechatSdk(object):
     WechatSdk
     Based on Wechat user code
     """
+    openid = ''
+    wxsskey = ''
 
     def __init__(self, code):
         super(WechatSdk, self).__init__()
@@ -135,7 +137,9 @@ class WechatSdk(object):
 
         self.openid = info['openid']
         self.wxsskey = info['session_key']
+
         app.info(self.code + ':\t' + self.openid)
+
         return True
 
     def save_user(self):
@@ -210,7 +214,9 @@ class LoginManager(object):
 
     def reply(self):
         user = self.user
+        user.last_login = datetime.now()
         user_info = UserManager.get_user_info(user)
+        user.save()
 
         return {'code': ASEC.LOGIN_SUCCESS,
                 'user_type': user.user_type,
@@ -247,7 +253,7 @@ class UserManager(object):
         return {'name': name,
                 'avatar_links': avatar_links,
                 'user_type': user.user_type,
-                'qrcode': 'https://wash.cardwakefulness.cn/tools/' + LoginManager.gen_base64(user.wk)}
+                'qrcode': 'https://wash.wakefulness.cn/tools/qrcode/' + LoginManager.gen_base64(user.wk)}
 
     @staticmethod
     def get_user_store_id(user):
@@ -263,7 +269,7 @@ class UserManager(object):
         """
         User_type must be 2
         :param user:
-        :return: Courie User Area id
+        :return: Courier User Area id
         """
         return CourierProfile.objects.get(wk=user).area_id
 
@@ -610,8 +616,11 @@ class GoodsManager(object):
         goods_spec = self.data['spec']
         goods_stock = self.data['stock']
         is_recover = self.data['recover']
-        new_goods = Goods(goods_name=goods_name, goods_spec=goods_spec,
-                          goods_stock=goods_stock, is_recover=is_recover)
+
+        new_goods = Goods(goods_name=goods_name,
+                          goods_spec=goods_spec,
+                          goods_stock=goods_stock,
+                          is_recover=is_recover)
         new_goods.save()
 
         return {'message': 'ok', 'id': new_goods.goods_id}
@@ -631,16 +640,22 @@ class GoodsManager(object):
 
         return_list = []
         for i in goods_all:
-            return_list.append({'goods_id': i.goods_id, 'goods_name': i.goods_name, 'goods_spec': i.goods_spec,
-                                'goods_stock': i.goods_stock, 'is_recover': i.is_recover})
+            return_list.append({'goods_id': i.goods_id,
+                                'goods_name': i.goods_name,
+                                'goods_spec': i.goods_spec,
+                                'goods_stock': i.goods_stock,
+                                'is_recover': i.is_recover})
 
         return {'message': 'ok', 'info': return_list}
 
     @staticmethod
     def get_goods_info(goods_id):
         goods = Goods.objects.get(goods_id=goods_id)
-        return {'goods_id': goods.goods_id, 'goods_name': goods.goods_name, 'goods_spec': goods.goods_spec,
-                'goods_stock': goods.goods_stock, 'is_recover': goods.is_recover}
+        return {'goods_id': goods.goods_id,
+                'goods_name': goods.goods_name,
+                'goods_spec': goods.goods_spec,
+                'goods_stock': goods.goods_stock,
+                'is_recover': goods.is_recover}
 
     def reply(self):
         method_name = str(self.action) + '_goods'
@@ -661,7 +676,7 @@ class OrderManager(object):
     @staticmethod
     def gen_order_id():
         order_id = datetime.now().strftime("%Y%m%d%H%M%S") + \
-            str(random.randint(1000, 9999))
+                   str(random.randint(1000, 9999))
 
         return order_id
 
@@ -671,10 +686,17 @@ class OrderManager(object):
         store_id = UserManager.get_user_store_id(user)
         area_id = StoreManager.get_store_area_id(store_id=store_id)
         remarks = self.data['remarks']
+
         total_price = self.save_order_detail(order_id, store_id)
 
-        new_order = Order(order_id=order_id, store_id=store_id, user_id=user.wk, area_id=area_id,
-                          order_total_price=total_price, order_remarks=remarks)
+        new_order = Order(
+                    order_id=order_id,
+                    store_id=store_id,
+                    user_id=user.wk,
+                    area_id=area_id,
+                    order_total_price=total_price,
+                    order_remarks=remarks
+                )
 
         new_order.save()
         return {'message': 'ok', 'order_id': order_id}
@@ -687,14 +709,25 @@ class OrderManager(object):
         for i in pack_goods:
             goods_id = i['goods_id']
             goods_count = i['goods_count']
+
             this_goods = StoreGoods.objects.get(
-                goods_id=goods_id, store_id=store_id)
+                goods_id=goods_id,
+                store_id=store_id
+            )
+
             goods_price = this_goods.goods_price * this_goods.goods_spec
             total_price = goods_price * goods_count
             order_price += total_price
-            order_all_goods.append(OrderDetail(order_id=order_id, goods_id=goods_id,
-                                               goods_count=goods_count, goods_price=goods_price,
-                                               total_price=total_price))
+
+            order_all_goods.append(
+                OrderDetail(
+                    order_id=order_id,
+                    goods_id=goods_id,
+                    goods_count=goods_count,
+                    goods_price=goods_price,
+                    total_price=total_price
+                )
+            )
             # pass
 
         OrderDetail.objects.bulk_create(order_all_goods)
