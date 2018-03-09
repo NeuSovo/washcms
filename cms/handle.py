@@ -85,7 +85,7 @@ def usercheck(user_type=-1):
 
 class WechatSdk(object):
     __Appid = 'wx5c7d55175f3872b7'
-    __SECRET = '011e5Htd0ICswu1tRfrd0dDJtd0e5Hti'
+    __SECRET = '6050b3ca9c9b3823768ae1867ef9036e'
     """
     WechatSdk
     Based on Wechat user code
