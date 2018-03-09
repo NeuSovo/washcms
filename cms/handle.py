@@ -493,9 +493,6 @@ class StoreManager(object):
 
         return {'message': 'ok'}
 
-    def getprice_store(self):
-        return StoreManager.get_store_price(self.data['store_id'])
-
     @staticmethod
     def all_store():
         all_store = Store.store_all()
@@ -518,9 +515,16 @@ class StoreManager(object):
         result = []
         for i in all_store_price:
             result.append(
-                {'id': i.goods_id, 'spec': i.goods_spec, 'price': float(i.goods_price)})
+                {'goods_id': i.goods_id,
+                 'goods_name': GoodsManager.get_goods_name(goods_id=i.goods_id),
+                 'goods_spec': i.goods_spec,
+                 'goods_price': float(i.goods_price)})
 
         return result
+
+    def getprice_store(self):
+        goods_list = StoreManager.get_store_price(self.data['store_id'])
+        return {'message': 'ok', 'goods_list': goods_list}
 
     def reply(self):
         method_name = self.action + '_store'
@@ -675,6 +679,10 @@ class GoodsManager(object):
                 'goods_spec': goods.goods_spec,
                 'goods_stock': goods.goods_stock,
                 'is_recover': goods.is_recover}
+
+    @staticmethod
+    def get_goods_name(goods_id):
+        return Goods.objects.get(goods_id=goods_id).goods_name
 
     def reply(self):
         method_name = str(self.action) + '_goods'
