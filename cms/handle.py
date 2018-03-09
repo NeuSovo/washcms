@@ -376,7 +376,7 @@ class AreaManager(object):
 
     @staticmethod
     def get_area_name(area_id=-1):
-        return DeliveryArea.objects.get(area_id=area_id).area_name
+        return DeliveryArea.objects.get(id=area_id).area_name
 
     def reply(self):
         method_name = self.action + '_area'
@@ -506,7 +506,7 @@ class StoreManager(object):
                                    'phone': store.store_phone,
                                    'addr': store.store_addr,
                                    'area': store.store_area,
-                                   'area_name': AreaManager.get_area_name(store.store_id),
+                                   'area_name': AreaManager.get_area_name(store.store_area),
                                    'pay_type': store.store_pay_type,
                                    'deposit': store.store_deposit})
 
@@ -518,7 +518,7 @@ class StoreManager(object):
         result = []
         for i in all_store_price:
             result.append(
-                {'id': i.goods_id, 'spec': i.goods_spec, 'price': i.goods_price})
+                {'id': i.goods_id, 'spec': i.goods_spec, 'price': float(i.goods_price)})
 
         return result
 
