@@ -46,7 +46,7 @@ def usercheck(user_type=-1):
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
-                print("backup data : {}:{}".format(func.__name__, body))
+                app.info("[backup data :] {}:{}".format(func.__name__, body))
             except Exception as e:
                 app.info(str(e))
                 result['code'] = ASEC.ERROR_PARAME
