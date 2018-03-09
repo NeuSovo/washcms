@@ -34,7 +34,7 @@ class User(models.Model):
     reg_date = models.DateTimeField(
                    auto_now_add=True
                 )
-    last_login = models.DateTimeField()
+    last_login = models.DateTimeField(default=timezone.now)
 
     @staticmethod
     def all_admin():
