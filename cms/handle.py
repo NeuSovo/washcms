@@ -85,7 +85,7 @@ def usercheck(user_type=-1):
 
 class WechatSdk(object):
     __Appid = 'wx5c7d55175f3872b7'
-    __SECRET = '18e18b264801eb53c9fe7634504f2f15'
+    __SECRET = '011e5Htd0ICswu1tRfrd0dDJtd0e5Hti'
     """
     WechatSdk
     Based on Wechat user code
@@ -108,7 +108,6 @@ class WechatSdk(object):
         return sha256(os.urandom(24)).hexdigest()
 
     def get_openid(self):
-        s = requests.Session()
         params = {
             'appid': self.__Appid,
             'secret': self.__SECRET,
@@ -117,14 +116,14 @@ class WechatSdk(object):
         }
 
         try:
-            data = s.get(
+            data = requests.get(
                 'https://api.weixin.qq.com/sns/jscode2session', params=params)
         except Exception as e:
             app.error(str(e) + '\tcode:' + str(self.code))
             return False
 
         info = data.json()
-
+        print(info)
         if 'openid' not in info:
             app.info('parameter \'{}\' error'.format(self.code))
             if settings.DEBUG:
@@ -467,7 +466,6 @@ class StoreManager(object):
 
     def setprice_store(self):
         price_list = self.data['goods_price']
-        # user = get_user(wckey=self.wckey)
         store_id = self.data['store_id']
         store_goods = StoreGoods.objects.filter(store_id=store_id)
 
@@ -495,6 +493,9 @@ class StoreManager(object):
 
         return {'message': 'ok'}
 
+    def getprice_store(self):
+        return StoreManager.get_store_price(self.data['store_id'])
+
     @staticmethod
     def all_store():
         all_store = Store.store_all()
@@ -505,13 +506,14 @@ class StoreManager(object):
                                    'phone': store.store_phone,
                                    'addr': store.store_addr,
                                    'area': store.store_area,
+                                   'area_name': AreaManager.get_area_name(store.store_id),
                                    'pay_type': store.store_pay_type,
                                    'deposit': store.store_deposit})
 
         return {'message': 'ok', 'info': all_store_list}
 
     @staticmethod
-    def get_store_price(store_id):
+    def get_store_price(store_id=0):
         all_store_price = StoreGoods.objects.filter(store_id=store_id)
         result = []
         for i in all_store_price:
