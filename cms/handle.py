@@ -343,7 +343,7 @@ class AreaManager(object):
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
             if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有配送员'}
-            if len(Store.objects.get(store_area=self.data['id'])) != 0:
+            if len(Store.objects.filter(store_area=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有商家'}
 
             to_delete.delete()
