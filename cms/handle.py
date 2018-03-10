@@ -46,7 +46,11 @@ def usercheck(user_type=-1):
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
-                app.info("[backup data :] {}:{}".format(func.__name__, body))
+                if 'action' in request.GET:
+                    app.info("[backup data] {}\t{}:{}".format(
+                        func.__name__, request.GET['action'], body))
+
+                app.info("[backup data] {}:{}".format(func.__name__, body))
             except Exception as e:
                 app.info(str(e))
                 result['code'] = ASEC.ERROR_PARAME
@@ -123,7 +127,7 @@ class WechatSdk(object):
             return False
 
         info = data.json()
-        print(info)
+        # print(info)
         if 'openid' not in info:
             app.info('parameter \'{}\' error'.format(self.code))
             if settings.DEBUG:
@@ -329,22 +333,19 @@ class AreaManager(object):
             return False
 
     def add_area(self):
-        """
-            post name
-        """
         new_area = DeliveryArea(area_name=self.data['name'])
         new_area.save()
 
         return {'message': 'ok', 'id': new_area.id}
 
     def del_area(self):
-        """
-            post id
-        """
         try:
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
-            # if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
-            #     return {'message': '请确保此区域下已没有配送员'}
+            if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
+                return {'message': '请确保此区域下已没有配送员'}
+            if len(Store.objects.get(store_area=self.data['id'])) != 0:
+                return {'message': '请确保此区域下已没有商家'}
+
         except Exception as e:
             app.info(str(e))
             return {'message': '删除失败,可能成功'}
@@ -352,9 +353,6 @@ class AreaManager(object):
         return {'message': 'ok'}
 
     def change_area(self):
-        """
-             post id,new_name
-        """
         area = DeliveryArea.objects.get(id=self.data['id'])
         area.area_name = self.data['name']
         area.save()
@@ -362,11 +360,9 @@ class AreaManager(object):
 
     @staticmethod
     def all_area():
-        """
-            None
-        """
         all_area = DeliveryArea.area_all()
         all_area_list = []
+
         for _i in all_area:
             all_area_list.append({'id': _i.id,
                                   'name': _i.area_name})
@@ -428,6 +424,7 @@ class StoreManager(object):
     def del_store(self):
         try:
             Store.objects.get(store_id=self.data['id']).delete()
+            StoreGoods.objects.filter(store_id=self.data['id']).delete()
         except Exception as e:
             app.error(str(e) + '{}'.format(self.data['id']))
             return {'message': 'delete failed'}
@@ -465,7 +462,7 @@ class StoreManager(object):
             return None
 
     def setprice_store(self):
-        price_list = self.data['goods_price']
+        price_list = self.data['goods_list']
         store_id = self.data['store_id']
         store_goods = StoreGoods.objects.filter(store_id=store_id)
 
@@ -476,7 +473,8 @@ class StoreManager(object):
             goods_price = goods['goods_price']
             goods_stock = goods['goods_stock']
 
-            goods_info = GoodsManager.get_goods_info(goods_id=goods['goods_id'])
+            goods_info = GoodsManager.get_goods_info(
+                goods_id=goods['goods_id'])
 
             if goods['goods_id'] not in store_goods_list:
                 new_price = StoreGoods(store_id=store_id,
@@ -487,7 +485,7 @@ class StoreManager(object):
                                        goods_spec=goods_info['goods_spec'])
                 new_price.save()
             else:
-                this_goods = StoreGoods.objects.get(goods_id=goods_id)
+                this_goods = StoreGoods.objects.get(store_id=store_id, goods_id=goods_id)
                 this_goods.goods_price = goods_price
                 this_goods.save()
 
@@ -573,7 +571,8 @@ class EmployeeManager(object):
 
     @staticmethod
     def all_employee():
-        all_employee = User.objects.filter(Q(user_type=0) | Q(user_type=1) | Q(user_type=2))
+        all_employee = User.objects.filter(
+            Q(user_type=0) | Q(user_type=1) | Q(user_type=2))
 
         all_employee_list = []
         for i in all_employee:
@@ -703,7 +702,7 @@ class OrderManager(object):
     @staticmethod
     def gen_order_id():
         order_id = datetime.now().strftime("%Y%m%d%H%M%S") + \
-                   str(random.randint(1000, 9999))
+            str(random.randint(1000, 9999))
 
         return order_id
 
@@ -717,13 +716,13 @@ class OrderManager(object):
         total_price = self.save_order_detail(order_id, store_id)
 
         new_order = Order(
-                    order_id=order_id,
-                    store_id=store_id,
-                    user_id=user.wk,
-                    area_id=area_id,
-                    order_total_price=total_price,
-                    order_remarks=remarks
-                )
+            order_id=order_id,
+            store_id=store_id,
+            user_id=user.wk,
+            area_id=area_id,
+            order_total_price=total_price,
+            order_remarks=remarks
+        )
 
         new_order.save()
         return {'message': 'ok', 'order_id': order_id}
