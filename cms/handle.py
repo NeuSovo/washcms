@@ -346,6 +346,7 @@ class AreaManager(object):
             if len(Store.objects.get(store_area=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有商家'}
 
+            to_delete.delete()
         except Exception as e:
             app.info(str(e))
             return {'message': '删除失败,可能成功'}
