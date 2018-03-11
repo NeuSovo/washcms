@@ -64,7 +64,7 @@ def usercheck(user_type=-1):
             try:
                 user_key = Session.objects.get(session_data=wckey)
             except Exception as e:
-                app.error(str(e) + 'wckey:{}'.format(wckey))
+                app.info(str(e) + 'wckey:{}'.format(wckey))
                 result['code'] = ASEC.SESSION_NOT_WORK
                 result['message'] = ASEC.getMessage(ASEC.SESSION_NOT_WORK)
 
