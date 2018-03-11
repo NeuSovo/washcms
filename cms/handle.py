@@ -345,7 +345,7 @@ class AreaManager(object):
     def del_area(self):
         try:
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
-            if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:`
+            if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有配送员'}
             if len(Store.objects.filter(store_area=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有商家'}
@@ -653,6 +653,16 @@ class GoodsManager(object):
         new_goods.save()
 
         return {'message': 'ok', 'id': new_goods.goods_id}
+
+    def set_goods(self):
+        try:
+            this_goods = Goods.objects.get(goods_id=self.data['goods_info'])
+            this_goods.goods_stock = stock
+            this_goods.save()
+            return {'message': 'ok'}
+        except Exception as e:
+            app.info(str(e))
+            return {'message': 'failed'}
 
     def del_goods(self):
         goods_id = self.data['id']
