@@ -76,7 +76,7 @@ def usercheck(user_type=-1):
                 return parse_info(result)
 
             user = UserManager.get_user(wckey=wckey)
-
+            print (user.user_type)
             if user_type == -1 or user.user_type <= user_type:
                 return func(request, user)
             else:
@@ -656,8 +656,8 @@ class GoodsManager(object):
 
     def set_goods(self):
         try:
-            this_goods = Goods.objects.get(goods_id=self.data['goods_info'])
-            this_goods.goods_stock = stock
+            this_goods = Goods.objects.get(goods_id=self.data['goods_id'])
+            this_goods.goods_stock = self.data['stock']
             this_goods.save()
             return {'message': 'ok'}
         except Exception as e:
