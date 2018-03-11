@@ -44,7 +44,7 @@ def usercheck(user_type=-1):
         def inner_wrapper(request):
             result = {}
             try:
-                print(request.body)
+#                print(request.body)
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
                 if 'action' in request.GET:
