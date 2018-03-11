@@ -90,7 +90,8 @@ class Store(models.Model):
                     default=0
                 )
     store_addr = models.CharField(
-                    max_length=155
+                    max_length=11,
+                    default='无'
                 )
     store_area = models.IntegerField(
                     default=0,
