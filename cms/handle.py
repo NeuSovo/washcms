@@ -44,7 +44,6 @@ def usercheck(user_type=-1):
         def inner_wrapper(request):
             result = {}
             try:
-#                print(request.body)
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
                 if 'action' in request.GET:
@@ -346,7 +345,7 @@ class AreaManager(object):
     def del_area(self):
         try:
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
-            if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
+            if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:`
                 return {'message': '请确保此区域下已没有配送员'}
             if len(Store.objects.filter(store_area=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有商家'}
@@ -480,11 +479,10 @@ class StoreManager(object):
             goods_stock = goods['goods_stock']
 
             try:
-                goods_info = GoodsManager.get_goods_info(
-                    goods_id=goods['goods_id'])
+                Goods.object.get(goods_id=goods_id)
             except Exception as e:
                 app.error(str(e))
-                return {'message':'failed'}
+                return {'message': 'failed'}
 
             if goods['goods_id'] not in store_goods_list:
                 new_price = StoreGoods(store_id=store_id,
@@ -608,10 +606,13 @@ class CustomerUserManager(object):
         self.user = user
 
     def bind(self, store_id):
+        """
+        [TODO] Rebind 
+        """
         user = self.user
         new_customer = CustomerProfile(wk=user, store_id=store_id)
         new_customer.save()
-        if user.user_type <= 3:
+        if user.user_type < 3:
             return {'message': 'failed'}
 
         user.user_type = 3
@@ -620,7 +621,10 @@ class CustomerUserManager(object):
         return {'message': 'ok'}
 
     def reply(self):
-        store_id = self.data['store_id']
+        try:
+            store_id = self.data['store_id']
+        except Exception as e:
+            return {"message":'failed'}
 
         if not StoreManager.check_id_exist(store_id):
             return {'message': 'store_id not exist'}
@@ -629,14 +633,7 @@ class CustomerUserManager(object):
 
 
 class GoodsManager(object):
-    """docstring for GoodsManager"""
-    """
-    action:
-        add
-        del
-        change
-        all
-    TODO 完善
+    """docstring for GoodsManager
     """
 
     def __init__(self, postdata, action=all):
@@ -752,7 +749,7 @@ class OrderManager(object):
                 store_id=store_id
             )
 
-            goods_price = this_goods.goods_price * goods_info['goods_spec']
+            goods_price = this_goods.goods_price * goods_info['goods_spec'] * goods_count
             total_price = goods_price * goods_count
             order_price += total_price
 
