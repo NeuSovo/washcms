@@ -44,6 +44,7 @@ def usercheck(user_type=-1):
         def inner_wrapper(request):
             result = {}
             try:
+                print(request.body)
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
                 if 'action' in request.GET:
@@ -219,6 +220,10 @@ class LoginManager(object):
         user = self.user
         user.last_login = datetime.now()
         user_info = UserManager.get_user_info(user)
+
+        if settings.DEBUG:
+            user_info['qrcode'] = 'https://wash.wakefulness.cn/tools/qrcode/' + \
+                user_info['qrcode']
         user.save()
 
         return {'code': ASEC.LOGIN_SUCCESS,
@@ -256,7 +261,7 @@ class UserManager(object):
         return {'name': name,
                 'avatar_links': avatar_links,
                 'user_type': user.user_type,
-                'qrcode': 'https://wash.wakefulness.cn/tools/qrcode/' + LoginManager.gen_base64(user.wk)}
+                'qrcode': LoginManager.gen_base64(user.wk)}
 
     @staticmethod
     def get_user_store_id(user):
@@ -474,19 +479,22 @@ class StoreManager(object):
             goods_price = goods['goods_price']
             goods_stock = goods['goods_stock']
 
-            goods_info = GoodsManager.get_goods_info(
-                goods_id=goods['goods_id'])
+            try:
+                goods_info = GoodsManager.get_goods_info(
+                    goods_id=goods['goods_id'])
+            except Exception as e:
+                app.error(str(e))
+                return {'message':'failed'}
 
             if goods['goods_id'] not in store_goods_list:
                 new_price = StoreGoods(store_id=store_id,
                                        goods_id=goods_id,
-                                       goods_name=goods_info['goods_name'],
                                        goods_price=goods_price,
-                                       goods_stock=goods_stock,
-                                       goods_spec=goods_info['goods_spec'])
+                                       goods_stock=goods_stock)
                 new_price.save()
             else:
-                this_goods = StoreGoods.objects.get(store_id=store_id, goods_id=goods_id)
+                this_goods = StoreGoods.objects.get(
+                    store_id=store_id, goods_id=goods_id)
                 this_goods.goods_price = goods_price
                 this_goods.save()
 
@@ -513,10 +521,11 @@ class StoreManager(object):
         all_store_price = StoreGoods.objects.filter(store_id=store_id)
         result = []
         for i in all_store_price:
+            goods_info = GoodsManager.get_goods_info(goods_id=i.goods_id)
             result.append(
                 {'goods_id': i.goods_id,
-                 'goods_name': GoodsManager.get_goods_name(goods_id=i.goods_id),
-                 'goods_spec': i.goods_spec,
+                 'goods_name': goods_info['goods_name'],
+                 'goods_spec': goods_info['goods_spec'],
                  'goods_price': float(i.goods_price)})
 
         return result
@@ -636,9 +645,9 @@ class GoodsManager(object):
 
     def add_goods(self):
         goods_name = self.data['name']
-        goods_spec = self.data['spec']
-        goods_stock = self.data['stock']
-        is_recover = self.data['recover']
+        goods_spec = int(self.data['spec'])
+        goods_stock = int(self.data['stock'])
+        is_recover = int(self.data['recover'])
 
         new_goods = Goods(goods_name=goods_name,
                           goods_spec=goods_spec,
@@ -680,9 +689,9 @@ class GoodsManager(object):
                 'goods_stock': goods.goods_stock,
                 'is_recover': goods.is_recover}
 
-    @staticmethod
-    def get_goods_name(goods_id):
-        return Goods.objects.get(goods_id=goods_id).goods_name
+    # @staticmethod
+    # def get_goods_info(goods_id):
+    #     return Goods.objects.get(goods_id=goods_id).goods_name
 
     def reply(self):
         method_name = str(self.action) + '_goods'
@@ -729,20 +738,21 @@ class OrderManager(object):
         return {'message': 'ok', 'order_id': order_id}
 
     def save_order_detail(self, order_id, store_id):
-        pack_goods = self.data['pack_goods']
+        pack_goods = self.data['goods_list']
         order_all_goods = []
-        # goods_price = StoreManager.get_store_price(self.store_id)
         order_price = 0
+
         for i in pack_goods:
             goods_id = i['goods_id']
             goods_count = i['goods_count']
 
+            goods_info = GoodsManager.get_goods_info(goods_id=goods_id)
             this_goods = StoreGoods.objects.get(
                 goods_id=goods_id,
                 store_id=store_id
             )
 
-            goods_price = this_goods.goods_price * this_goods.goods_spec
+            goods_price = this_goods.goods_price * goods_info['goods_spec']
             total_price = goods_price * goods_count
             order_price += total_price
 

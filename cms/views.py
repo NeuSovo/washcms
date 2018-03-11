@@ -5,7 +5,7 @@ import qrcode
 from django.utils.six import BytesIO
 from django.shortcuts import HttpResponse
 
-from cms.handle import (WechatSdk, LoginManager, AreaManager, StoreManager, 
+from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager, 
                         usercheck,EmployeeManager,CustomerUserManager,GoodsManager,
                         OrderManager)
 from cms.apps import APIServerErrorCode as ASEC
@@ -208,6 +208,21 @@ def bind_user_view(request, user):
 
     result = CustomerUserManager(postdata=body, user=user)
     response = parse_info(result.reply())
+
+    return response
+
+
+@usercheck(user_type=3)
+def get_user_goods_view(request, user):
+    result = {}
+
+    body = json.loads(request.body)
+
+    user_store_id = UserManager.get_user_store_id(user)
+    result['message'] = 'ok'
+    result['goods_list'] = StoreManager.get_store_price(user_store_id)
+
+    response = parse_info(result)
 
     return response
 

@@ -173,19 +173,19 @@ class StoreGoods(models.Model):
                     null=False,
                     blank=True
                 )
-    goods_name = models.CharField(
-                    max_length=155
-                )
     goods_stock = models.IntegerField(
                     default=0
-                )
-    goods_spec = models.IntegerField(
-                    default=1
                 )
     goods_price = models.DecimalField(
                     max_digits=8,
                     decimal_places=3
                 )
+    # goods_name = models.CharField(
+    #                 max_length=155
+    #             )
+    # goods_spec = models.IntegerField(
+    #                 default=1
+    #             )
 
 
 class Order(models.Model):
