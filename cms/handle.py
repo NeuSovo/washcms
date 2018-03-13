@@ -542,6 +542,10 @@ class StoreManager(object):
         return result
 
     @staticmethod
+    def get_store_pay_type(store_id):
+        return StoreManager.get_store_info(store_id)['pay_type']
+
+    @staticmethod
     def get_store_info(store_id):
         try:
             this_store = Store.objects.get(store_id=store_id)
@@ -767,6 +771,7 @@ class OrderManager(object):
             store_id=store_id,
             user_id=user.wk,
             area_id=area_id,
+            pay_type=StoreManager.get_store_pay_type(store_id),
             order_total_price=total_price,
             order_remarks=remarks
         )
@@ -788,12 +793,10 @@ class OrderManager(object):
                 goods_id=goods_id,
                 store_id=store_id
             )
-
-            goods_price = this_goods.goods_price * \
-                goods_info['goods_spec'] * goods_count
-            total_price = goods_price * goods_count
+            goods_price = this_goods.goods_price * goods_info['goods_spec']
+            
+            total_price = goods_price * int(goods_count)
             order_price += total_price
-
             order_all_goods.append(
                 OrderDetail(
                     order_id=order_id,

@@ -199,10 +199,15 @@ class StoreGoods(models.Model):
 
 
 class Order(models.Model):
-    pay_level = (
-        (0, '支付'),
-        (1, '未支付')
-    )
+    pay_type_level = (
+        (0, '日结'),
+        (1, '月结')
+        )
+    order_type_level = (
+        (0,'已完成'),
+        (1,'待支付'),
+        (2,'待送达')
+        )
     pay_from_level = (
         (0, '现金'),
         (1, '微信'),
@@ -235,13 +240,17 @@ class Order(models.Model):
     area_id = models.IntegerField(
                     blank=False
                 )
-    is_receive = models.IntegerField(
-                    choices=receive_level,
-                    default=1
+    order_type = models.IntegerField(
+                choices=order_type_level,
+                default=2
                 )
-    is_pay = models.IntegerField(
-                    choices=pay_level,  
-                    default=1
+    receive_time = models.DateTimeField(
+                null=True,
+                blank=True
+                )
+    pay_type = models.IntegerField(
+                    choices=pay_type_level,  
+                    default=0
                 )
     pay_from = models.IntegerField(
                     choices=pay_from_level,

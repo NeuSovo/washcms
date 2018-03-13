@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea,Goods,Order,OrderDetail,StoreGoods
+from cms.models import CodeRecord, User, CustomerProfile, Store, DeliveryArea, Goods, Order, OrderDetail, StoreGoods
 # Register your models here.
 
 
@@ -41,15 +41,16 @@ class UserTypeFilter(admin.SimpleListFilter):
         """
         if self.value():
             if int(self.value()) == 0:
-                return queryset.filter(user_type = 0)
+                return queryset.filter(user_type=0)
             if int(self.value()) == 1:
-                return queryset.filter(user_type = 1)
+                return queryset.filter(user_type=1)
             if int(self.value()) == 2:
-                return queryset.filter(user_type = 2)
+                return queryset.filter(user_type=2)
             if int(self.value()) == 3:
-                return queryset.filter(user_type = 3)
+                return queryset.filter(user_type=3)
             if int(self.value()) == 4:
-                return queryset.filter(user_type = 4)
+                return queryset.filter(user_type=4)
+
 
 class UserAdmin(admin.ModelAdmin):
     '''
@@ -73,10 +74,10 @@ class UserAdmin(admin.ModelAdmin):
 
     get_user_type.allow_tags = True
 
-    def get_readonly_fields(self,*args, **kwargs):
+    def get_readonly_fields(self, *args, **kwargs):
         return ['wk']
 
-    list_display = ('wk', 'nick_name','get_user_type')
+    list_display = ('wk', 'nick_name', 'get_user_type')
 
     list_filter = (UserTypeFilter,)
     inlines = (UserProfileAdmin,)
@@ -86,24 +87,27 @@ class StoreAdmin(admin.ModelAdmin):
     '''
         Admin View for Store
     '''
-    list_display = ('store_id','store_name','store_area','store_pay_type')
-    list_filter = ('store_pay_type','store_area')
+    list_display = ('store_id', 'store_name', 'store_area', 'store_pay_type')
+    list_filter = ('store_pay_type', 'store_area')
     # inlines = [
     #     Inline,
     # ]
     # raw_id_fields = ('',)
     # readonly_fields = ('',)
     # search_fields = ('',)
+
+
 class AreaAdmin(admin.ModelAdmin):
     '''
         Admin View for Area
     '''
-    list_display = ('id','area_name',)
+    list_display = ('id', 'area_name',)
 
 
 class GoodsAdmin(admin.ModelAdmin):
 
-    list_display = ('goods_name','goods_spec','goods_stock','is_recover',)
+    list_display = ('goods_name', 'goods_spec', 'goods_stock', 'is_recover',)
+
 
 class OrderDetailAdmin(admin.ModelAdmin):
     model = OrderDetail
@@ -112,18 +116,19 @@ class OrderDetailAdmin(admin.ModelAdmin):
 
 
 class OrderAdmin(admin.ModelAdmin):
-    readonly_fields = ('user_id','store_id', 'area_id','order_id' , 'create_time' , 'done_time', 'order_total_price')
-    list_display = ('create_time','is_receive','is_pay','pay_from','order_total_price')
-
+    readonly_fields = ('user_id', 'store_id', 'area_id', 'order_id',
+                       'create_time', 'done_time', 'order_total_price')
+    list_display = ('create_time', 'store_id', 'pay_type',
+                    'pay_from', 'order_total_price')
 
 
 class StoreGoodsAdmin(admin.ModelAdmin):
     readonly_fields = ('store_id', 'goods_id')
-    list_display = ('store_id','goods_id','goods_price','goods_stock')
+    list_display = ('store_id', 'goods_id', 'goods_price', 'goods_stock')
 
 
 admin.site.register(StoreGoods, StoreGoodsAdmin)
-admin.site.register(Order,OrderAdmin)
+admin.site.register(Order, OrderAdmin)
 admin.site.register(Goods, GoodsAdmin)
 admin.site.register(DeliveryArea, AreaAdmin)
 admin.site.register(Store, StoreAdmin)

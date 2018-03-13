@@ -278,3 +278,8 @@ def change_profile_view(request, user):
     response = parse_info(result)
 
     return response
+
+
+def test_view(request,action):
+    print (type(action))
+    return HttpResponse(action)
