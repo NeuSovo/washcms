@@ -249,3 +249,32 @@ def order_view(request, user):
 
     return response
 
+
+@usercheck(user_type=3)
+def change_profile_view(request, user):
+    result = {}
+    body = json.loads(request.body)
+    user_store_id = UserManager.get_user_store_id(user)
+
+    if 'action' not in request.GET:
+        action = 'get'
+    else :
+        action = request.GET['action']
+
+    if action is 'get':
+        store_info = StoreManager.get_store_info(user_store_id)
+        
+        if 'message' in store_info:
+            return store_info
+
+        result['store_info'] = store_info
+        result['message'] = 'ok'
+
+    if action == 'set':
+        this_store = UserManager.set_user_store_profile(user, body)
+        result['new_store_info'] = StoreManager.get_store_info(this_store.store_id)
+        result['message'] = 'ok'
+
+    response = parse_info(result)
+
+    return response

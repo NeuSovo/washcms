@@ -20,6 +20,7 @@ from cms.apps import APIServerErrorCode as ASEC
 # from cms.views import *
 
 app = logging.getLogger('app.custom')
+request_backup = logging.getLogger('app.backup')
 
 
 def parse_info(data):
@@ -46,11 +47,6 @@ def usercheck(user_type=-1):
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
-                if 'action' in request.GET:
-                    app.info("[backup data] {}\t{}:{}".format(
-                        func.__name__, request.GET['action'], body))
-
-                app.info("[backup data] {}:{}".format(func.__name__, body))
             except Exception as e:
                 app.info(str(e))
                 result['code'] = ASEC.ERROR_PARAME
@@ -76,7 +72,16 @@ def usercheck(user_type=-1):
                 return parse_info(result)
 
             user = UserManager.get_user(wckey=wckey)
-            print (user.user_type)
+
+            if 'action' not in request.GET:
+                app.info("[{}][{}][{}][{}]".format(
+                    func.__name__, 'null', user.wk, user.user_type))
+            else:
+                app.info("[{}][{}][{}][{}]".format(
+                    func.__name__, request.GET['action'], user.wk, user.user_type))
+
+            request_backup.info(str(body))
+
             if user_type == -1 or user.user_type <= user_type:
                 return func(request, user)
             else:
@@ -309,6 +314,21 @@ class UserManager(object):
         return store
 
     @staticmethod
+    def get_user_store_profile(user, profile):
+        """
+        only user type is 3
+        """
+        store_id = UserManager.get_user_store_id(user)
+        # store = Store.objects.get(store_id=store_id)
+
+        # store.store_addr = profile['addr']
+        # store.store_phone = profile['phone']
+        # store.store_name = profile['name']
+        store.save()
+
+        return store
+
+    @staticmethod
     def set_user_type(user, set_type, area_id=-1):
         """
         set_type = 0,1,2
@@ -503,14 +523,7 @@ class StoreManager(object):
         all_store = Store.store_all()
         all_store_list = []
         for store in all_store:
-            all_store_list.append({'id': store.store_id,
-                                   'name': store.store_name,
-                                   'phone': store.store_phone,
-                                   'addr': store.store_addr,
-                                   'area': store.store_area,
-                                   'area_name': AreaManager.get_area_name(store.store_area),
-                                   'pay_type': store.store_pay_type,
-                                   'deposit': store.store_deposit})
+            all_store_list.append(StoreManager.get_store_info(store.store_id))
 
         return {'message': 'ok', 'info': all_store_list}
 
@@ -527,6 +540,23 @@ class StoreManager(object):
                  'goods_price': float(i.goods_price)})
 
         return result
+
+    @staticmethod
+    def get_store_info(store_id):
+        try:
+            this_store = Store.objects.get(store_id=store_id)
+        except Exception as e:
+            app.info(str(e))
+            return {'message': 'failed'}
+
+        return {'id': this_store.store_id,
+                'name': this_store.store_name,
+                'area': this_store.store_area,
+                'area_name': AreaManager.get_area_name(this_store.store_area),
+                'phone': this_store.store_phone,
+                'addr': this_store.store_addr,
+                'deposite': this_store.store_deposit,
+                'pay_type': this_store.store_pay_type}
 
     def getprice_store(self):
         goods_list = StoreManager.get_store_price(self.data['store_id'])
@@ -624,7 +654,7 @@ class CustomerUserManager(object):
         try:
             store_id = self.data['store_id']
         except Exception as e:
-            return {"message":'failed'}
+            return {"message": 'failed'}
 
         if not StoreManager.check_id_exist(store_id):
             return {'message': 'store_id not exist'}
@@ -759,7 +789,8 @@ class OrderManager(object):
                 store_id=store_id
             )
 
-            goods_price = this_goods.goods_price * goods_info['goods_spec'] * goods_count
+            goods_price = this_goods.goods_price * \
+                goods_info['goods_spec'] * goods_count
             total_price = goods_price * goods_count
             order_price += total_price
 
