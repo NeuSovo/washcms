@@ -206,7 +206,8 @@ class Order(models.Model):
     order_type_level = (
         (0,'已完成'),
         (1,'待支付'),
-        (2,'待送达')
+        (2,'待送达'),
+        (3,'已取消')
         )
     pay_from_level = (
         (0, '现金'),

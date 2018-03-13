@@ -83,7 +83,7 @@ def usercheck(user_type=-1):
             request_backup.info(str(body))
 
             if user_type == -1 or user.user_type <= user_type:
-                return func(request, user)
+                return func(request=request, user=user)
             else:
                 return parse_info({'message': 'user_type failed'})
 
@@ -812,15 +812,37 @@ class OrderManager(object):
 
         return order_price
 
-    def get_older_detail(self):
+    @staticmethod
+    def get_older_detail(order_id):
         pass
 
-    def set_order_status(self):
-        pass
+    @staticmethod
+    def set_order_status(order_id, order_type):
+        max_cancel_minutes = timedelta(minutes=15)
+        order_type = int(order_type)
+        order = Order.objects.get(order_id=order_id)
+        if order_type == 3:
+            if datetime.now() - order.create_time > max_cancel_minutes:
+                return {'message':'failed'}
+            
+        order.order_type = order_type
+        order.save()
+
+        return {'message':'ok'}
 
     def new_order(self):
         return self.save_order()
 
+    def detail_order(self):
+        order_id = self.data['order_id']
+        order_detail = OrderManager.get_older_detail(order_id)
+        return {'message':'ok',
+                'info':order_detail}
+
+    def cancel_order(self):
+        order_id = self.data['order_id']
+        return OrderManager.set_order_status(order_id,3)
+            
     def reply(self):
         method_name = self.action + '_order'
         # try:
@@ -829,3 +851,4 @@ class OrderManager(object):
         # except Exception as e:
         #     print(e)
         #     return {'message': 'failed'}
+        
