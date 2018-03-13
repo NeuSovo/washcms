@@ -240,7 +240,7 @@ class Order(models.Model):
                     default=1
                 )
     is_pay = models.IntegerField(
-                    choices=pay_level,
+                    choices=pay_level,  
                     default=1
                 )
     pay_from = models.IntegerField(

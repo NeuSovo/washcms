@@ -73,6 +73,12 @@ LOGGING = {
             'filename': BASE_DIR + '/logs/tmp.log',
             'formatter':'simple'
         },
+        'file_backup':{
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR + '/logs/backup.log',
+            'formatter': 'simple'
+        },
         'request_info':{
             'level':'INFO',
             'class':'logging.FileHandler',
@@ -105,6 +111,10 @@ LOGGING = {
         'app.custom': {
             'handlers': ['console', 'mail_admins', 'file'],
             'level': 'INFO',
+        },
+        'app.backup' :{
+            'handlers': ['file_backup'],
+            'level': 'INFO'
         }
     }
 }
