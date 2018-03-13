@@ -545,8 +545,8 @@ class StoreManager(object):
     def get_store_pay_type(store_id):
         return StoreManager.get_store_info(store_id)['pay_type']
 
-    @staticmetho
-d    def get_store_info(store_id):
+    @staticmethod
+    def get_store_info(store_id):
         try:
             this_store = Store.objects.get(store_id=store_id)
         except Exception as e:
