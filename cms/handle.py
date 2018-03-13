@@ -499,7 +499,7 @@ class StoreManager(object):
             goods_stock = goods['goods_stock']
 
             try:
-                Goods.object.get(goods_id=goods_id)
+                Goods.objects.get(goods_id=goods_id)
             except Exception as e:
                 app.error(str(e))
                 return {'message': 'failed'}
@@ -545,8 +545,8 @@ class StoreManager(object):
     def get_store_pay_type(store_id):
         return StoreManager.get_store_info(store_id)['pay_type']
 
-    @staticmethod
-    def get_store_info(store_id):
+    @staticmetho
+d    def get_store_info(store_id):
         try:
             this_store = Store.objects.get(store_id=store_id)
         except Exception as e:
