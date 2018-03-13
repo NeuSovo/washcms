@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea,Goods,Order,OrderDetail
+from cms.models import CodeRecord, User, CustomerProfile,Store,DeliveryArea,Goods,Order,OrderDetail,StoreGoods
 # Register your models here.
 
 
@@ -103,7 +103,7 @@ class AreaAdmin(admin.ModelAdmin):
 
 class GoodsAdmin(admin.ModelAdmin):
 
-    list_display = ('goods_name','goods_spec','goods_stock','is_recover')
+    list_display = ('goods_name','goods_spec','goods_stock','is_recover',)
 
 class OrderDetailAdmin(admin.ModelAdmin):
     model = OrderDetail
@@ -112,10 +112,17 @@ class OrderDetailAdmin(admin.ModelAdmin):
 
 
 class OrderAdmin(admin.ModelAdmin):
-
+    readonly_fields = ('user_id','store_id', 'area_id','order_id' , 'create_time' , 'done_time', 'order_total_price')
     list_display = ('create_time','is_receive','is_pay','pay_from','order_total_price')
 
 
+
+class StoreGoodsAdmin(admin.ModelAdmin):
+    readonly_fields = ('store_id', 'goods_id')
+    list_display = ('store_id','goods_id','goods_price','goods_stock')
+
+
+admin.site.register(StoreGoods, StoreGoodsAdmin)
 admin.site.register(Order,OrderAdmin)
 admin.site.register(Goods, GoodsAdmin)
 admin.site.register(DeliveryArea, AreaAdmin)

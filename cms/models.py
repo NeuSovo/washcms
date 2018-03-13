@@ -76,8 +76,8 @@ class Store(models.Model):
         (1, '月结'),
     )
     area_level = []
-    # for i in DeliveryArea.area_all():
-    #     area_level.append([i.id, i.area_name])
+    for i in DeliveryArea.area_all():
+        area_level.append([i.id, i.area_name])
 
     store_id = models.IntegerField(
                     primary_key=True
@@ -166,11 +166,20 @@ class Goods(models.Model):
 
 
 class StoreGoods(models.Model):
+    store_level = []
+    goods_level = []
+    for i in Store.store_all():
+        store_level.append([i.store_id,i.store_name])
+
+    for i in Goods.goods_all():
+        goods_level.append([i.goods_id, i.goods_name])
     store_id = models.IntegerField(
+                    choices=store_level,
                     null=False,
                     blank=True
                 )
     goods_id = models.IntegerField(
+                    choices=goods_level,
                     null=False,
                     blank=True
                 )
@@ -190,6 +199,10 @@ class StoreGoods(models.Model):
 
 
 class Order(models.Model):
+    pay_level = (
+        (0, '支付'),
+        (1, '未支付')
+    )
     pay_from_level = (
         (0, '现金'),
         (1, '微信'),
@@ -201,6 +214,11 @@ class Order(models.Model):
         (1, '未送到')
         )
 
+    store_level = []
+    area_level = []
+    for i in Store.store_all():
+        store_level.append([i.store_id,i.store_name])
+
     order_id = models.BigIntegerField(
                     primary_key=True
                 )
@@ -208,6 +226,7 @@ class Order(models.Model):
                     auto_now_add=True
                 )
     store_id = models.IntegerField(
+                    choices=store_level,
                     blank=False
                 )
     user_id = models.CharField(
@@ -221,6 +240,7 @@ class Order(models.Model):
                     default=1
                 )
     is_pay = models.IntegerField(
+                    choices=pay_level,
                     default=1
                 )
     pay_from = models.IntegerField(
