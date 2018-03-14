@@ -281,10 +281,13 @@ def change_profile_view(request, user):
 
 
 @usercheck(user_type=3)
-def test_view(request,user,action,status = None):
+def test_view(request,user,action = None,status = None):
     body = json.loads(request.body)
 
     if action == 'status':
         body['status'] = status
 
     result = OrderManager(action=action,postdata=body, user=user)
+    response = parse_info(result.reply())
+
+    return response

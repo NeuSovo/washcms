@@ -42,7 +42,7 @@ def get_user(wckey):
 
 def usercheck(user_type=-1):
     def wrapper(func):
-        def inner_wrapper(request):
+        def inner_wrapper(request,action=None,status=None):
             result = {}
             try:
                 body = json.loads(request.body)
@@ -73,17 +73,21 @@ def usercheck(user_type=-1):
 
             user = UserManager.get_user(wckey=wckey)
 
-            if 'action' not in request.GET:
-                app.info("[{}][{}][{}][{}]".format(
-                    func.__name__, 'null', user.wk, user.user_type))
-            else:
-                app.info("[{}][{}][{}][{}]".format(
-                    func.__name__, request.GET['action'], user.wk, user.user_type))
+            # if action is None and 'action' in requests.GET:
+            #     action = requests.GET['action']
+            # else:
+            #     action = 'null'
+
+            app.info("[{}][{}][{}]".format(
+                    func.__name__, user.wk, user.user_type))
 
             request_backup.info(str(body))
 
             if user_type == -1 or user.user_type <= user_type:
-                return func(request=request, user=user)
+                if func.__name__ == 'test_view':
+                    return func(request=request, user=user,action=action,status=status)
+                else:
+                    return func(request=request, user=user)
             else:
                 return parse_info({'message': 'user_type failed'})
 
@@ -794,7 +798,7 @@ class OrderManager(object):
                 store_id=store_id
             )
             goods_price = this_goods.goods_price * goods_info['goods_spec']
-            
+
             total_price = goods_price * int(goods_count)
             order_price += total_price
             order_all_goods.append(
@@ -817,18 +821,30 @@ class OrderManager(object):
         pass
 
     @staticmethod
+    def get_order_simple_detail(order_id):
+        order = Order.objects.get(order_id=order_id)
+        return {
+            'order_id': order.order_id,
+            'create_time': str(order.create_time),
+            'order_type': order.order_type,
+            'pay_type': order.pay_type,
+            'order_total_price': str(order.order_total_price),
+        }
+
+    @staticmethod
     def set_order_status(order_id, order_type):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
         order = Order.objects.get(order_id=order_id)
+
         if order_type == 3:
             if datetime.now() - order.create_time > max_cancel_minutes:
-                return {'message':'failed'}
-            
+                return {'message': 'failed'}
+
         order.order_type = order_type
         order.save()
 
-        return {'message':'ok'}
+        return {'message': 'ok'}
 
     def new_order(self):
         return self.save_order()
@@ -836,19 +852,34 @@ class OrderManager(object):
     def detail_order(self):
         order_id = self.data['order_id']
         order_detail = OrderManager.get_older_detail(order_id)
-        return {'message':'ok',
-                'info':order_detail}
+        return {'message': 'ok',
+                'info': order_detail}
 
     def cancel_order(self):
         order_id = self.data['order_id']
-        return OrderManager.set_order_status(order_id,3)
-            
+        return OrderManager.set_order_status(order_id, 3)
+
+    def status_order(self):
+        status = self.data['status']
+        store_id = UserManager.get_user_store_id(user=self.user)
+        status_order = []
+
+        if int(status) > 3:
+            return {'message': 'failed'}
+        
+        order_list = Order.objects.filter(store_id=store_id, order_type=status)
+
+        for i in order_list:
+            status_order.append(
+                OrderManager.get_order_simple_detail(i.order_id))
+
+        return {'message':'ok','info':status_order}
+
     def reply(self):
         method_name = self.action + '_order'
-        # try:
-        method = getattr(self, method_name)
-        return method()
-        # except Exception as e:
-        #     print(e)
-        #     return {'message': 'failed'}
-        
+        try:
+            method = getattr(self, method_name)
+            return method()
+        except Exception as e:
+            print(e)
+            return {'message': 'failed'}

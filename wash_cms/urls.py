@@ -39,4 +39,7 @@ urlpatterns = [
     path('user/getgoods', get_user_goods_view),
     path('user/profile', change_profile_view),
 
+    path('user/order/<str:action>',test_view),
+    path('user/order/<str:action>/<int:status>',test_view)
+
 ]
