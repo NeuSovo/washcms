@@ -265,7 +265,8 @@ class Order(models.Model):
                     max_length=155
                 )
     done_time = models.DateTimeField(
-                    auto_now=True
+                    null=True,
+                    blank=True
                 )
 
 

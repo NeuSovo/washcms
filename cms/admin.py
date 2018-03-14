@@ -118,9 +118,10 @@ class OrderDetailAdmin(admin.ModelAdmin):
 class OrderAdmin(admin.ModelAdmin):
     readonly_fields = ('user_id', 'store_id', 'area_id', 'order_id',
                        'create_time', 'done_time', 'order_total_price')
-    list_display = ('create_time', 'store_id', 'pay_type',
+    list_display = ('order_type','create_time', 'store_id', 'pay_type',
                     'pay_from', 'order_total_price')
 
+    list_filter = ('order_type', 'pay_type','pay_from')
 
 class StoreGoodsAdmin(admin.ModelAdmin):
     readonly_fields = ('store_id', 'goods_id')

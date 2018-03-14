@@ -481,15 +481,10 @@ class StoreManager(object):
             app.error(str(e) + '{}'.format(data))
             return {'message': 'failed'}
 
-    @staticmethod
-    def get_store_area_id(store_id):
-        try:
-            store = Store.objects.get(store_id=store_id)
-            return store.store_area
-        except Exception as e:
-            app.error(str(e))
-            return None
-
+    def getprice_store(self):
+        goods_list = StoreManager.get_store_price(self.data['store_id'])
+        return {'message': 'ok', 'goods_list': goods_list}
+   
     def setprice_store(self):
         price_list = self.data['goods_list']
         store_id = self.data['store_id']
@@ -521,6 +516,15 @@ class StoreManager(object):
                 this_goods.save()
 
         return {'message': 'ok'}
+
+    @staticmethod
+    def get_store_area_id(store_id):
+        try:
+            store = Store.objects.get(store_id=store_id)
+            return store.store_area
+        except Exception as e:
+            app.error(str(e))
+            return None
 
     @staticmethod
     def all_store():
@@ -566,9 +570,6 @@ class StoreManager(object):
                 'deposite': this_store.store_deposit,
                 'pay_type': this_store.store_pay_type}
 
-    def getprice_store(self):
-        goods_list = StoreManager.get_store_price(self.data['store_id'])
-        return {'message': 'ok', 'goods_list': goods_list}
 
     def reply(self):
         method_name = self.action + '_store'
@@ -578,9 +579,6 @@ class StoreManager(object):
         except Exception as e:
             app.info(str(e))
             return StoreManager.all_store()
-
-    def __str__(self):
-        return len(self.data)
 
 
 class EmployeeManager(object):
@@ -734,10 +732,6 @@ class GoodsManager(object):
                 'goods_stock': goods.goods_stock,
                 'is_recover': goods.is_recover}
 
-    # @staticmethod
-    # def get_goods_info(goods_id):
-    #     return Goods.objects.get(goods_id=goods_id).goods_name
-
     def reply(self):
         method_name = str(self.action) + '_goods'
         try:
@@ -817,8 +811,19 @@ class OrderManager(object):
         return order_price
 
     @staticmethod
-    def get_older_detail(order_id):
-        pass
+    def get_order_goods_detail(order_id):
+        result = []
+        goods = OrderDetail.objects.filter(order_id=order_id)
+        
+        for i in goods:
+            goods_info = GoodsManager.get_goods_info(i.goods_id)
+            result.append({'goods_id': i.goods_id,
+                           'goods_name': goods_info['goods_name'],
+                           'goods_spec': goods_info['goods_spec'],
+                           'goods_count': i.goods_count,
+                           'total_price': str(i.total_price)})
+
+        return result
 
     @staticmethod
     def get_order_simple_detail(order_id):
@@ -829,6 +834,10 @@ class OrderManager(object):
             'order_type': order.order_type,
             'pay_type': order.pay_type,
             'order_total_price': str(order.order_total_price),
+            'receive_time': str(order.receive_time),
+            'pay_from': order.pay_from,
+            'remarks': order.order_remarks,
+            'done_time': str(order.done_time)
         }
 
     @staticmethod
@@ -851,9 +860,12 @@ class OrderManager(object):
 
     def detail_order(self):
         order_id = self.data['order_id']
-        order_detail = OrderManager.get_older_detail(order_id)
+        order_info = OrderManager.get_order_simple_detail(order_id)
+
+        order_goods = OrderManager.get_order_goods_detail(order_id)
         return {'message': 'ok',
-                'info': order_detail}
+                'info': order_info,
+                'goods': order_goods}
 
     def cancel_order(self):
         order_id = self.data['order_id']
@@ -881,5 +893,6 @@ class OrderManager(object):
             method = getattr(self, method_name)
             return method()
         except Exception as e:
-            print(e)
-            return {'message': 'failed'}
+            app.info(str(e))
+            return {'message': str(e)}
+
