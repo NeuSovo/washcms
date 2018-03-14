@@ -829,7 +829,7 @@ class OrderManager(object):
     def get_order_simple_detail(order_id):
         order = Order.objects.get(order_id=order_id)
         return {
-            'order_id': order.order_id,
+            'order_id': str(order.order_id),
             'create_time': str(order.create_time),
             'order_type': order.order_type,
             'pay_type': order.pay_type,
