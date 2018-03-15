@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from datetime import datetime,timedelta
 # Create your models here.
 # class UserProfile
 
@@ -294,9 +295,12 @@ class Session(models.Model):
                     unique=True
                 )
     we_ss_key = models.CharField(
-                    max_length=100
+                    max_length=100,
+                    default='None',
                 )
-    expire_date = models.DateTimeField()
+    expire_date = models.DateTimeField(
+                default=datetime.now() + timedelta(30)
+                )
 
 
 class CodeRecord(models.Model):

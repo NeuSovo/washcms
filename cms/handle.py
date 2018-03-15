@@ -48,7 +48,7 @@ def usercheck(user_type=-1):
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
             except Exception as e:
-                app.info(str(e))
+                app.info("1" + str(e))
                 result['code'] = ASEC.ERROR_PARAME
                 result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
                 response = parse_info(result)
@@ -203,7 +203,7 @@ class LoginManager(object):
         return self.user
 
     def check(self, sign, checktime):
-        if time.time() - int(checktime) > 30:
+        if time.time() - int(checktime) > 5:
             return False
 
         to_check_str = str(self.TOKEN) + str(checktime)
@@ -229,7 +229,7 @@ class LoginManager(object):
         user.last_login = datetime.now()
         user_info = UserManager.get_user_info(user)
 
-        if settings.DEBUG:
+        if not settings.DEBUG:
             user_info['qrcode'] = 'https://wash.wakefulness.cn/tools/qrcode/' + \
                 user_info['qrcode']
         user.save()
@@ -339,6 +339,10 @@ class UserManager(object):
         """
         if set_type == 2:
             CourierProfile(wk=user, area_id=area_id).save()
+
+        if set_type == 4:
+            if user.user_type == 2:
+                CourierProfile.objects.get(wk=user).delete()
 
         user.user_type = set_type
         user.save()
@@ -454,6 +458,12 @@ class StoreManager(object):
         try:
             Store.objects.get(store_id=self.data['id']).delete()
             StoreGoods.objects.filter(store_id=self.data['id']).delete()
+
+            cus_user = CustomerProfile.objects.filter(store_id=self.data['id'])
+            for i in cus_user:
+                UserManager.set_user_type(i.wk,4)
+                i.delete()
+
         except Exception as e:
             app.error(str(e) + '{}'.format(self.data['id']))
             return {'message': 'delete failed'}
@@ -690,6 +700,14 @@ class GoodsManager(object):
 
         return {'message': 'ok', 'id': new_goods.goods_id}
 
+    def del_goods(self):
+        goods_id = self.data['goods_id']
+        Goods.objects.get(goods_id=goods_id).delete()
+        StoreGoods.objects.filter(goods_id=goods_id).delete()
+
+        return {'message':'ok'}
+
+
     def set_goods(self):
         try:
             this_goods = Goods.objects.get(goods_id=self.data['goods_id'])
@@ -700,7 +718,7 @@ class GoodsManager(object):
             app.info(str(e))
             return {'message': 'failed'}
 
-    def del_goods(self):
+ 
         goods_id = self.data['id']
         try:
             Goods.objects.get(goods_id=goods_id).delete()
