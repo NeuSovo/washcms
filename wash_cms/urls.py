@@ -39,7 +39,12 @@ urlpatterns = [
     path('user/getgoods', get_user_goods_view),
     path('user/profile', change_profile_view),
 
-    path('user/order/<str:action>',test_view),
-    path('user/order/<str:action>/<int:status>',test_view)
+    path('user/order/<str:action>',order_2_view),
+    path('user/order/<str:action>/<int:status>',order_2_view),
+
+    # # path('staff/kuguan/'),
+    path('staff/peisong/profile/<str:action>', staff_profile_view),# get,update
+    path('staff/peisong/order/<str:action>', staff_order_view), # get,receive,pay
+    # path('staff/peisong/',)
 
 ]
