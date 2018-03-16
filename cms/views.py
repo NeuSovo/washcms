@@ -5,9 +5,9 @@ import qrcode
 from django.utils.six import BytesIO
 from django.shortcuts import HttpResponse
 
-from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager, 
-                        usercheck,EmployeeManager,CustomerUserManager,GoodsManager,
-                        OrderManager)
+from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
+                        usercheck, EmployeeManager, CustomerUserManager, GoodsManager,
+                        OrderManager,PeiSongManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -39,7 +39,7 @@ def qrcode_view(request, data):
     buf = BytesIO()
     img.save(buf)
     image_stream = buf.getvalue()
- 
+
     response = HttpResponse(image_stream, content_type="image/png")
 
     return response
@@ -61,7 +61,8 @@ def register_view(request):
         return response
 
     # update 2018/03/07
-    wk = WechatSdk(request.GET['code'])  # request.GET['name'],request.GET['url'])
+    # request.GET['name'],request.GET['url'])
+    wk = WechatSdk(request.GET['code'])
     if not wk.get_openid():
         result['code'] = ASEC.WRONG_PARAME
         result['message'] = ASEC.getMessage(ASEC.WRONG_PARAME)
@@ -196,7 +197,7 @@ def change_goods_view(request, user):
     else:
         action = request.GET['action']
 
-    result = GoodsManager(action=action,postdata=body)
+    result = GoodsManager(action=action, postdata=body)
     response = parse_info(result.reply())
 
     return response
@@ -221,14 +222,14 @@ def get_user_goods_view(request, user):
     user_store_id = UserManager.get_user_store_id(user)
     result['message'] = 'ok'
     goods_list = StoreManager.get_store_price(user_store_id)
-    
-    for i,item in enumerate(goods_list):
+
+    for i, item in enumerate(goods_list):
         goods_info = GoodsManager.get_goods_info(item['goods_id'])
         goods_stock = goods_info['goods_stock']
         is_recover = goods_info['is_recover']
         goods_list[i]['goods_stock'] = goods_stock
         goods_list[i]['is_revoer'] = is_recover
-    
+
     result['goods_list'] = goods_list
     response = parse_info(result)
 
@@ -258,12 +259,12 @@ def change_profile_view(request, user):
 
     if 'action' not in request.GET:
         action = 'get'
-    else :
+    else:
         action = request.GET['action']
 
     if action is 'get':
         store_info = StoreManager.get_store_info(user_store_id)
-        
+
         if 'message' in store_info:
             return store_info
 
@@ -272,7 +273,8 @@ def change_profile_view(request, user):
 
     if action == 'set':
         this_store = UserManager.set_user_store_profile(user, body)
-        result['new_store_info'] = StoreManager.get_store_info(this_store.store_id)
+        result['new_store_info'] = StoreManager.get_store_info(
+            this_store.store_id)
         result['message'] = 'ok'
 
     response = parse_info(result)
@@ -281,13 +283,54 @@ def change_profile_view(request, user):
 
 
 @usercheck(user_type=3)
-def test_view(request,user,action = None,status = None):
+def order_2_view(request, user, action=None, status=None):
     body = json.loads(request.body)
 
     if action == 'status':
         body['status'] = status
 
-    result = OrderManager(action=action,postdata=body, user=user)
+    result = OrderManager(action=action, postdata=body, user=user)
     response = parse_info(result.reply())
+
+    return response
+
+
+@usercheck(user_type=2)
+def staff_profile_view(request, action, user):
+    result = {}
+    body = json.loads(request.body)
+
+    result['message'] = 'failed'
+
+    if action == 'set':
+        UserManager.set_user_peisong_profile(user=user, profile=body)
+        result['message'] = 'ok'
+        result['new_info'] = UserManager.get_user_peisong_profile(user=user)
+    
+    if action == 'get':
+        info = UserManager.get_user_peisong_profile(user=user)
+        result['message'] = 'ok'
+        result['info'] = info
+    
+
+    response = parse_info(result)
+
+    return response
+
+
+@usercheck(user_type=2)
+def staff_order_view(request, action, user):
+    result = {}
+
+    body = json.loads(request.body)
+    peisong = PeiSongManager(user=user, postdata=body)
+
+    if action == 'get':
+        result = peisong.get_peisong()
+
+    if action == 'receive':
+        result = peisong.receive_peisong()
+
+    response = parse_info(result)
 
     return response
