@@ -310,7 +310,7 @@ class UserManager(object):
         store = Store.objects.get(store_id=store_id)
 
         store.store_addr = profile['addr']
-        store.store_phone = profile['phone']
+        store.store_phone =int(profile['phone'])
         store.store_name = profile['name']
         store.save()
 
