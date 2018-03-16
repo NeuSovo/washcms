@@ -87,7 +87,7 @@ class Store(models.Model):
                     max_length=155,
                     default=0
                 )
-    store_phone = models.IntegerField(
+    store_phone = models.BigIntegerField(
                     default=0
                 )
     store_addr = models.CharField(
