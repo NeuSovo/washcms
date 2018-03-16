@@ -136,6 +136,13 @@ class CourierProfile(models.Model):
     area_id = models.IntegerField(
             default=-1
         )
+    name = models.CharField(
+            default='peisong_name',
+            max_length=50
+        )
+    phone = models.BigIntegerField(
+            default=0
+        )
 
 
 class Goods(models.Model):
@@ -216,10 +223,6 @@ class Order(models.Model):
         (2, '月结'),
         (3, '未支付')
     )
-    receive_level = (
-        (0, '已送到'),
-        (1, '未送到')
-        )
 
     store_level = []
     area_level = []
@@ -269,6 +272,8 @@ class Order(models.Model):
                     null=True,
                     blank=True
                 )
+    class Meta:
+        ordering = ['-create_time']
 
 
 class OrderDetail(models.Model):

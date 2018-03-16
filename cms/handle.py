@@ -42,8 +42,15 @@ def get_user(wckey):
 
 def usercheck(user_type=-1):
     def wrapper(func):
-        def inner_wrapper(request,action=None,status=None):
+        def inner_wrapper(*args, **kwargs):
             result = {}
+            request = args[0]
+            if 'action' in request.GET:
+                action = request.GET['action']
+            elif 'action' in kwargs:
+                action = kwargs['action']
+            else:
+                action = 'None'
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
@@ -73,21 +80,13 @@ def usercheck(user_type=-1):
 
             user = UserManager.get_user(wckey=wckey)
 
-            # if action is None and 'action' in requests.GET:
-            #     action = requests.GET['action']
-            # else:
-            #     action = 'null'
-
-            app.info("[{}][{}][{}]".format(
-                    func.__name__, user.wk, user.user_type))
+            app.info("[{}][{}][{}][{}]".format(
+                func.__name__, user.wk, action, user.user_type))
 
             request_backup.info(str(body))
 
             if user_type == -1 or user.user_type <= user_type:
-                if func.__name__ == 'test_view':
-                    return func(request=request, user=user,action=action,status=status)
-                else:
-                    return func(request=request, user=user)
+                return func(*args, **kwargs, user=user)
             else:
                 return parse_info({'message': 'user_type failed'})
 
@@ -333,6 +332,29 @@ class UserManager(object):
         return store
 
     @staticmethod
+    def set_user_peisong_profile(user, profile):
+        try:
+            phone = int(profile['phone'])
+        except Exception as e:
+            app.info(str(e))
+            return
+
+        peisong = CourierProfile.objects.get(wk=user)
+        peisong.name = profile['name']
+        peisong.phone = phone
+        peisong.save()
+
+        return peisong
+
+    @staticmethod
+    def get_user_peisong_profile(user):
+        peisong = CourierProfile.objects.get(wk=user)
+        return {'area_id': peisong.area_id,
+                'area_name': AreaManager.get_area_name(area_id=peisong.area_id),
+                'name': peisong.name,
+                'phone': peisong.phone}
+
+    @staticmethod
     def set_user_type(user, set_type, area_id=-1):
         """
         set_type = 0,1,2
@@ -404,7 +426,7 @@ class AreaManager(object):
                 'info': all_area_list}
 
     @staticmethod
-    def get_area_name(area_id=-1):
+    def get_area_name(area_id):
         return DeliveryArea.objects.get(id=area_id).area_name
 
     def reply(self):
@@ -461,7 +483,7 @@ class StoreManager(object):
 
             cus_user = CustomerProfile.objects.filter(store_id=self.data['id'])
             for i in cus_user:
-                UserManager.set_user_type(i.wk,4)
+                UserManager.set_user_type(i.wk, 4)
                 i.delete()
 
         except Exception as e:
@@ -494,7 +516,7 @@ class StoreManager(object):
     def getprice_store(self):
         goods_list = StoreManager.get_store_price(self.data['store_id'])
         return {'message': 'ok', 'goods_list': goods_list}
-   
+
     def setprice_store(self):
         price_list = self.data['goods_list']
         store_id = self.data['store_id']
@@ -580,6 +602,17 @@ class StoreManager(object):
                 'deposite': this_store.store_deposit,
                 'pay_type': this_store.store_pay_type}
 
+    @staticmethod
+    def sync_store_stock(order_id, store_id):
+        goods_pool = OrderDetail.objects.filter(order_id=order_id)
+
+        for i in goods_pool:
+            store_goods = StoreGoods.objects.get(
+                store_id=store_id, goods_id=i.goods_id)
+            store_goods.goods_stock += i.goods_count
+            store_goods.save()
+
+        return {'message': 'ok'}
 
     def reply(self):
         method_name = self.action + '_store'
@@ -705,8 +738,7 @@ class GoodsManager(object):
         Goods.objects.get(goods_id=goods_id).delete()
         StoreGoods.objects.filter(goods_id=goods_id).delete()
 
-        return {'message':'ok'}
-
+        return {'message': 'ok'}
 
     def set_goods(self):
         try:
@@ -718,7 +750,6 @@ class GoodsManager(object):
             app.info(str(e))
             return {'message': 'failed'}
 
- 
         goods_id = self.data['id']
         try:
             Goods.objects.get(goods_id=goods_id).delete()
@@ -832,7 +863,7 @@ class OrderManager(object):
     def get_order_goods_detail(order_id):
         result = []
         goods = OrderDetail.objects.filter(order_id=order_id)
-        
+
         for i in goods:
             goods_info = GoodsManager.get_goods_info(i.goods_id)
             result.append({'goods_id': i.goods_id,
@@ -868,6 +899,11 @@ class OrderManager(object):
             if datetime.now() - order.create_time > max_cancel_minutes:
                 return {'message': 'failed'}
 
+        if order_type == 1:
+            if order.order_type <= 1:
+                return {'message': 'failed'}
+            order.receive_time = datetime.now()
+
         order.order_type = order_type
         order.save()
 
@@ -896,14 +932,15 @@ class OrderManager(object):
 
         if int(status) > 3:
             return {'message': 'failed'}
-        
-        order_list = Order.objects.filter(store_id=store_id, order_type=status)
+
+        order_list = Order.objects.filter(
+            store_id=store_id, order_type=status)[:30]
 
         for i in order_list:
             status_order.append(
                 OrderManager.get_order_simple_detail(i.order_id))
 
-        return {'message':'ok','info':status_order}
+        return {'message': 'ok', 'info': status_order}
 
     def reply(self):
         method_name = self.action + '_order'
@@ -914,3 +951,60 @@ class OrderManager(object):
             app.info(str(e))
             return {'message': str(e)}
 
+
+class PeiSongManager():
+    def __init__(self, user, postdata):
+        self.user = user
+        self.data = postdata
+        self.area_id = UserManager.get_user_area_id(user)
+
+    def get_peisong(self):
+        """
+        Redis
+
+        """
+        result = {}
+        info = []
+        order_pool = Order.objects.filter(area_id=self.area_id, order_type=2)
+
+        for i in order_pool:
+            peisong_detail = {}
+            store_info = StoreManager.get_store_info(store_id=i.store_id)
+            goods_info = OrderManager.get_order_goods_detail(
+                order_id=i.order_id)
+
+            peisong_detail['order_info'] = {}
+            peisong_detail['order_info']['order_id'] = str(i.order_id)
+            peisong_detail['order_info']['create_time'] = str(i.create_time)
+            peisong_detail['order_info']['order_total_price'] = str(
+                i.order_total_price)
+            peisong_detail['order_info']['pay_type'] = i.pay_type
+
+            peisong_detail['goods_info'] = goods_info
+
+            peisong_detail['store_info'] = {}
+            peisong_detail['store_info']['name'] = store_info['name']
+            peisong_detail['store_info']['phone'] = store_info['phone']
+            peisong_detail['store_info']['addr'] = store_info['addr']
+
+            info.append(peisong_detail)
+
+        result['message'] = 'ok'
+        result['info'] = info
+
+        return result
+
+    def receive_peisong(self):
+        try:
+            order_id = self.data['order_id']
+        except:
+            return {'message': 'failed'}
+
+        res = OrderManager.set_order_status(order_id, 1)
+        if res['message'] != 'ok':
+            return res
+
+        StoreManager.sync_store_stock(
+            order_id, Order.objects.get(order_id=order_id).store_id)
+
+        return {'message': 'ok'}
