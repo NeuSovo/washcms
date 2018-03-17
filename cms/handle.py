@@ -310,7 +310,7 @@ class UserManager(object):
         store = Store.objects.get(store_id=store_id)
 
         store.store_addr = profile['addr']
-        store.store_phone =int(profile['phone'])
+        store.store_phone = int(profile['phone'])
         store.store_name = profile['name']
         store.save()
 
@@ -322,11 +322,11 @@ class UserManager(object):
         only user type is 3
         """
         store_id = UserManager.get_user_store_id(user)
-        # store = Store.objects.get(store_id=store_id)
+        store = Store.objects.get(store_id=store_id)
 
-        # store.store_addr = profile['addr']
-        # store.store_phone = profile['phone']
-        # store.store_name = profile['name']
+        store.store_addr = profile['addr']
+        store.store_phone = profile['phone']
+        store.store_name = profile['name']
         store.save()
 
         return store
@@ -959,7 +959,7 @@ class OrderManager(object):
             return {'message': str(e)}
 
 
-class PeiSongManager():
+class PeiSongManager(object):
     def __init__(self, user, postdata):
         self.user = user
         self.data = postdata

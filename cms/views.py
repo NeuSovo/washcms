@@ -15,7 +15,7 @@ def parse_info(data):
     """
     parser_info:
     :param data must be a dict
-    :parse dict data to json,and return HttpResponse
+    :return dict data to json,and return HttpResponse
     """
     return HttpResponse(json.dumps(data, indent=4),
                         content_type="application/json")
@@ -78,7 +78,6 @@ def register_view(request):
 
     response = parse_info(result)
     response.set_cookie('wckey', sess)
-    # response['wckey'] = sess
 
     return response
 
@@ -99,20 +98,17 @@ def login_view(request, user):
     view for login
     Accept User Cookies and return user info,
     This interface must Verify sign.
-    Request parmes :
-        sign : md5 (time + Token)
-        time : nowtime and 30s effective
-    Request Headers:
-        cookies : wckey
-    Return 
-        user_type
-        user_info
+    :param request:
+            sign : md5 (time + Token)
+            time : now time and 6s effective
+    :param user:
+    :return: user_type,user_info
     """
+
     result = {}
     body = json.loads(request.body)
-
-    # wckey = body['base_req']['wckey']
     login = LoginManager(user=user)
+
     if login.check(sign=body['sign'],
                    checktime=body['time']):
         result = login.reply()
@@ -129,16 +125,6 @@ def login_view(request, user):
 
 @usercheck(user_type=0)
 def change_deliveryarea_view(request, user):
-    """
-        add
-        del
-        change
-        {
-        'base_req':{
-            'wckey':'',
-            }
-        }
-    """
     body = json.loads(request.body)
 
     if 'action' not in request.GET:
@@ -188,8 +174,6 @@ def change_employee_view(request, user):
 
 @usercheck(user_type=1)
 def change_goods_view(request, user):
-    """
-    """
     body = json.loads(request.body)
 
     if 'action' not in request.GET:
@@ -228,7 +212,7 @@ def get_user_goods_view(request, user):
         goods_stock = goods_info['goods_stock']
         is_recover = goods_info['is_recover']
         goods_list[i]['goods_stock'] = goods_stock
-        goods_list[i]['is_revoer'] = is_recover
+        goods_list[i]['is_revoer'] = is_recover  # TODO
 
     result['goods_list'] = goods_list
     response = parse_info(result)
@@ -311,7 +295,6 @@ def staff_profile_view(request, action, user):
         info = UserManager.get_user_peisong_profile(user=user)
         result['message'] = 'ok'
         result['info'] = info
-    
 
     response = parse_info(result)
 
