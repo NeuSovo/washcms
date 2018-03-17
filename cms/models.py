@@ -59,7 +59,7 @@ class User(models.Model):
     def __str__(self):
         return '%s : %s' % (self.nick_name, self.type_level[self.user_type])
 
-    class Meat:
+    class Meta:
         ordering = ['-last_login']
 
 
