@@ -91,7 +91,7 @@ class Store(models.Model):
                     default=0
                 )
     store_addr = models.CharField(
-                    max_length=11,
+                    max_length=150,
                     default='无'
                 )
     store_area = models.IntegerField(
@@ -304,8 +304,7 @@ class Session(models.Model):
                     default='None',
                 )
     expire_date = models.DateTimeField(
-                default=datetime.now() + timedelta(30)
-                )
+              )
 
 
 class CodeRecord(models.Model):
