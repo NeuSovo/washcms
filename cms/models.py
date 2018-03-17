@@ -59,6 +59,9 @@ class User(models.Model):
     def __str__(self):
         return '%s : %s' % (self.nick_name, self.type_level[self.user_type])
 
+    class Meta:
+        ordering = ['-last_login']
+
 
 class DeliveryArea(models.Model):
     area_name = models.CharField(max_length=150)
