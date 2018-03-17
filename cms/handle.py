@@ -480,7 +480,14 @@ class StoreManager(object):
         try:
             Store.objects.get(store_id=self.data['id']).delete()
             StoreGoods.objects.filter(store_id=self.data['id']).delete()
+            order_pool = Order.objects.filter(store_id=self.data['id'])
+            
+            # delete Store Order and Order detail
+            for i in order_pool:
+                OrderDetail.objects.filter(order_id=i.order_id).delete()
+                i.delete()
 
+            # delete Store User
             cus_user = CustomerProfile.objects.filter(store_id=self.data['id'])
             for i in cus_user:
                 UserManager.set_user_type(i.wk, 4)
