@@ -726,6 +726,12 @@ class GoodsManager(object):
         self.data = postdata
         self.action = action
 
+
+    @staticmethod
+    def sync_goods_stock():
+        #TODO
+        pass    
+
     def add_goods(self):
         goods_name = self.data['name']
         goods_spec = int(self.data['spec'])
