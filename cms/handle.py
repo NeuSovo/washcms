@@ -730,6 +730,7 @@ class GoodsManager(object):
     @staticmethod
     def sync_goods_stock():
         #TODO
+        # TODAY
         pass    
 
     def add_goods(self):
