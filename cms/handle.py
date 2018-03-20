@@ -6,11 +6,13 @@ import base64
 import random
 import logging
 import requests
+from operator import itemgetter 
 from hashlib import sha256, md5
 
 from django.db.models import Q
 from django.conf import settings
 from django.shortcuts import HttpResponse
+
 
 from datetime import datetime, timedelta
 
@@ -1001,6 +1003,7 @@ class PeiSongManager(object):
         peisong_detail['order_info']['order_total_price'] = str(
             order.order_total_price)
         peisong_detail['order_info']['pay_type'] = order.pay_type
+        peisong_detail['order_info']['remarks'] = order.order_remarks
 
         peisong_detail['goods_info'] = goods_info
 
@@ -1051,6 +1054,11 @@ class PeiSongManager(object):
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
 
             info.append(peisong_detail)
+
+        def receive(s):
+            return s['order_info']['receive_time']
+
+        info = sorted(info, key=receive, reverse=True)
 
         result['message'] = 'ok'
         result['info'] = info
