@@ -997,6 +997,7 @@ class PeiSongManager(object):
         peisong_detail['order_info'] = {}
         peisong_detail['order_info']['order_id'] = str(order.order_id)
         peisong_detail['order_info']['create_time'] = str(order.create_time)
+        peisong_detail['order_info']['receive_time'] = str(order.receive_time)
         peisong_detail['order_info']['order_total_price'] = str(
             order.order_total_price)
         peisong_detail['order_info']['pay_type'] = order.pay_type
