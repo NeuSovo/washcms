@@ -44,7 +44,11 @@ urlpatterns = [
 
     # # path('staff/kuguan/'),
     path('staff/peisong/profile/<str:action>', staff_profile_view),# get,update
-    path('staff/peisong/order/<str:action>', staff_order_view), # get,receive,pay
-    # path('staff/peisong/',)
+
+    path('staff/peisong/order/<str:status>/<str:action>', staff_peisong_order_view), # get,receive,pay
+    # path('staff/peisong/order/receive/(get,set)')
+    # path('staff/peisong/order/pay/(get,set)')
+    
+    path('test',test_test_view)
 
 ]
