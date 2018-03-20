@@ -48,6 +48,7 @@ urlpatterns = [
     path('staff/peisong/order/<str:status>/<str:action>', staff_peisong_order_view), # get,receive,pay
     # path('staff/peisong/order/receive/(get,set)')
     # path('staff/peisong/order/pay/(get,set)')
+    path('staff/peisong/stock/<str:action>',staff_peisong_stock_view),       # car,ps
     
     path('test',test_test_view)
 

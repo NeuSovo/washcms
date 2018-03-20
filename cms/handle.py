@@ -1067,3 +1067,21 @@ class PeiSongManager(object):
 
         return {'message': 'ok'}
 
+    def get_car_stock(self):
+        pass
+
+    def get_ps_stock(self):
+        # pass
+        order_pool = Order.objects.filter(area_id=self.area_id, order_type=2)
+        info = {}
+        for i in order_pool:
+            goods_info = OrderManager.get_order_goods_detail(
+            order_id=i.order_id)
+            for j in goods_info:
+                if info.has_key(j.goods_id):
+                    info[j.goods_id] += j.goods_count
+                else:
+                    info[j.goods_id] = j.goods_count
+
+        return {'message': 'ok',
+                'info':info}
