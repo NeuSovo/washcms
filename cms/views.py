@@ -7,7 +7,7 @@ from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
                         usercheck, EmployeeManager, CustomerUserManager, GoodsManager,
-                        OrderManager,PeiSongManager)
+                        OrderManager, PeiSongManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -127,7 +127,7 @@ def login_view(request, user):
 def change_deliveryarea_view(request, user):
     body = json.loads(request.body)
 
-    action = request.GET.get('action','all')
+    action = request.GET.get('action', 'all')
 
     result = AreaManager(action=action, postdata=body)
 
@@ -141,7 +141,7 @@ def change_store_view(request, user):
 
     body = json.loads(request.body)
 
-    action = request.GET.get('action','all')
+    action = request.GET.get('action', 'all')
 
     result = StoreManager(action=action, postdata=body)
 
@@ -155,7 +155,7 @@ def change_employee_view(request, user):
 
     body = json.loads(request.body)
 
-    action = request.GET.get('action','all')
+    action = request.GET.get('action', 'all')
 
     result = EmployeeManager(action=action, postdata=body)
     response = parse_info(result.reply())
@@ -167,7 +167,7 @@ def change_employee_view(request, user):
 def change_goods_view(request, user):
     body = json.loads(request.body)
 
-    action = request.GET.get('action','all')
+    action = request.GET.get('action', 'all')
 
     result = GoodsManager(action=action, postdata=body)
     response = parse_info(result.reply())
@@ -212,7 +212,7 @@ def get_user_goods_view(request, user):
 def order_view(request, user):
     body = json.loads(request.body)
 
-    action = request.GET.get('action','all')
+    action = request.GET.get('action', 'all')
 
     result = OrderManager(action=action, postdata=body, user=user)
     response = parse_info(result.reply())
@@ -226,11 +226,10 @@ def change_profile_view(request, user):
     body = json.loads(request.body)
     user_store_id = UserManager.get_user_store_id(user)
 
-    action = request.GET.get('action','get')
+    action = request.GET.get('action', 'get')
 
-    print (action)
     if action == 'get':
-        print (action)
+        print(action)
         store_info = StoreManager.get_store_info(user_store_id)
 
         if 'message' in store_info:
@@ -240,7 +239,6 @@ def change_profile_view(request, user):
         result['message'] = 'ok'
 
     if action == 'set':
-        print (action)
         this_store = UserManager.set_user_store_profile(user, body)
         result['new_store_info'] = StoreManager.get_store_info(
             this_store.store_id)
@@ -275,7 +273,7 @@ def staff_profile_view(request, action, user):
         UserManager.set_user_peisong_profile(user=user, profile=body)
         result['message'] = 'ok'
         result['new_info'] = UserManager.get_user_peisong_profile(user=user)
-    
+
     if action == 'get':
         info = UserManager.get_user_peisong_profile(user=user)
         result['message'] = 'ok'
@@ -287,14 +285,22 @@ def staff_profile_view(request, action, user):
 
 
 @usercheck(user_type=2)
-def staff_order_view(request, action, user):
+def staff_peisong_order_view(request, status, action, user):
     result = {}
 
     body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
+    
+    # get_receive_peisong
+    # set_receive_peisong
+    # get_pay_peisong
+    # set_pay_peisong
 
-    method_name = action + '_peisong'
-    result = getattr(peisong,method_name)
+    try:
+        method_name = action + '_' + status + '_peisong'
+        result = getattr(peisong, method_name)
+    except Exception as e:
+        return parse_info({'message': str(e)})
 
     response = parse_info(result())
 
@@ -303,6 +309,6 @@ def staff_order_view(request, action, user):
 
 def test_test_view(request):
 
-    action = request.GET.get('action','all')
+    action = request.GET.get('action', 'all')
 
     return HttpResponse(action)

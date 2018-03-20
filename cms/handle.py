@@ -904,10 +904,15 @@ class OrderManager(object):
         }
 
     @staticmethod
-    def set_order_status(order_id, order_type):
+    def set_order_status(order_id, order_type,pay_from = None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
-        order = Order.objects.get(order_id=order_id)
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            app.info(str(e))
+            return {'message': str(e)}
+
 
         if order_type == 3:
             if datetime.now() - order.create_time > max_cancel_minutes:
@@ -917,6 +922,16 @@ class OrderManager(object):
             if order.order_type <= 1:
                 return {'message': 'failed'}
             order.receive_time = datetime.now()
+
+        if order_type == 0:
+            order.done_time = datetime.now()
+            if pay_from is None:
+                return {'message': 'failed'}
+
+            if order.pay_type == 1 and pay_from !=2:
+                return {'message': '月结订单支付方式只能是月结'}
+
+            order.pay_from = pay_from       
 
         order.order_type = order_type
         order.save()
@@ -972,9 +987,32 @@ class PeiSongManager(object):
         self.data = postdata
         self.area_id = UserManager.get_user_area_id(user)
 
-    def get_peisong(self):
+    @staticmethod
+    def get_peisong_order_info(order):
+        peisong_detail = {}
+        store_info = StoreManager.get_store_info(store_id=order.store_id)
+        goods_info = OrderManager.get_order_goods_detail(
+            order_id=order.order_id)
+
+        peisong_detail['order_info'] = {}
+        peisong_detail['order_info']['order_id'] = str(order.order_id)
+        peisong_detail['order_info']['create_time'] = str(order.create_time)
+        peisong_detail['order_info']['order_total_price'] = str(
+            order.order_total_price)
+        peisong_detail['order_info']['pay_type'] = order.pay_type
+
+        peisong_detail['goods_info'] = goods_info
+
+        peisong_detail['store_info'] = {}
+        peisong_detail['store_info']['name'] = store_info['name']
+        peisong_detail['store_info']['phone'] = store_info['phone']
+        peisong_detail['store_info']['addr'] = store_info['addr']
+
+        return peisong_detail
+
+    def get_receive_peisong(self):
         """
-        Redis
+        [TODO] Redis
 
         """
         result = {}
@@ -982,24 +1020,7 @@ class PeiSongManager(object):
         order_pool = Order.objects.filter(area_id=self.area_id, order_type=2)
 
         for i in order_pool:
-            peisong_detail = {}
-            store_info = StoreManager.get_store_info(store_id=i.store_id)
-            goods_info = OrderManager.get_order_goods_detail(
-                order_id=i.order_id)
-
-            peisong_detail['order_info'] = {}
-            peisong_detail['order_info']['order_id'] = str(i.order_id)
-            peisong_detail['order_info']['create_time'] = str(i.create_time)
-            peisong_detail['order_info']['order_total_price'] = str(
-                i.order_total_price)
-            peisong_detail['order_info']['pay_type'] = i.pay_type
-
-            peisong_detail['goods_info'] = goods_info
-
-            peisong_detail['store_info'] = {}
-            peisong_detail['store_info']['name'] = store_info['name']
-            peisong_detail['store_info']['phone'] = store_info['phone']
-            peisong_detail['store_info']['addr'] = store_info['addr']
+            peisong_detail = PeiSongManager.get_peisong_order_info(i)
 
             info.append(peisong_detail)
 
@@ -1008,11 +1029,8 @@ class PeiSongManager(object):
 
         return result
 
-    def receive_peisong(self):
-        try:
-            order_id = self.data['order_id']
-        except:
-            return {'message': 'failed'}
+    def set_receive_peisong(self):
+        order_id = self.data.get('order_id',0)
 
         res = OrderManager.set_order_status(order_id, 1)
         if res['message'] != 'ok':
@@ -1022,3 +1040,30 @@ class PeiSongManager(object):
             order_id, Order.objects.get(order_id=order_id).store_id)
 
         return {'message': 'ok'}
+
+    def get_pay_peisong(self):
+        result = {}
+        info = []
+        order_pool = Order.objects.filter(area_id=self.area_id, order_type=1)
+
+        for i in order_pool:
+            peisong_detail = PeiSongManager.get_peisong_order_info(i)
+
+            info.append(peisong_detail)
+
+        result['message'] = 'ok'
+        result['info'] = info
+
+        return result
+
+    def set_pay_peisong(self):
+        order_id = self.data.get('order_id',0)
+        pay_from = self.data.get('pay_from',None)
+
+        res = OrderManager.set_order_status(order_id, 0, pay_from=pay_from)
+        
+        if res['message'] != 'ok':
+            return res
+
+        return {'message': 'ok'}
+
