@@ -1078,10 +1078,11 @@ class PeiSongManager(object):
             goods_info = OrderManager.get_order_goods_detail(
             order_id=i.order_id)
             for j in goods_info:
-                if j.goods_id in info:
-                    info[j.goods_id] += j.goods_count
-                else:
-                    info[j.goods_id] = j.goods_count
+                for k in j:
+                    if k.goods_id in info:
+                        info[k.goods_id] += k.goods_count
+                    else:
+                        info[k.goods_id] = k.goods_count
 
         return {'message': 'ok',
                 'info':info}
