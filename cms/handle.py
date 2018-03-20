@@ -1078,7 +1078,7 @@ class PeiSongManager(object):
             goods_info = OrderManager.get_order_goods_detail(
             order_id=i.order_id)
             for j in goods_info:
-                if info.has_key(j.goods_id):
+                if j.goods_id in info:
                     info[j.goods_id] += j.goods_count
                 else:
                     info[j.goods_id] = j.goods_count
