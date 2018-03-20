@@ -127,10 +127,7 @@ def login_view(request, user):
 def change_deliveryarea_view(request, user):
     body = json.loads(request.body)
 
-    if 'action' not in request.GET:
-        action = 'all'
-    else:
-        action = request.GET['action']
+    action = request.GET.get('action','all')
 
     result = AreaManager(action=action, postdata=body)
 
@@ -144,10 +141,7 @@ def change_store_view(request, user):
 
     body = json.loads(request.body)
 
-    if 'action' not in request.GET:
-        action = 'all'
-    else:
-        action = request.GET['action']
+    action = request.GET.get('action','all')
 
     result = StoreManager(action=action, postdata=body)
 
@@ -161,10 +155,7 @@ def change_employee_view(request, user):
 
     body = json.loads(request.body)
 
-    if 'action' not in request.GET:
-        action = 'all'
-    else:
-        action = request.GET['action']
+    action = request.GET.get('action','all')
 
     result = EmployeeManager(action=action, postdata=body)
     response = parse_info(result.reply())
@@ -176,10 +167,7 @@ def change_employee_view(request, user):
 def change_goods_view(request, user):
     body = json.loads(request.body)
 
-    if 'action' not in request.GET:
-        action = 'all'
-    else:
-        action = request.GET['action']
+    action = request.GET.get('action','all')
 
     result = GoodsManager(action=action, postdata=body)
     response = parse_info(result.reply())
@@ -224,10 +212,7 @@ def get_user_goods_view(request, user):
 def order_view(request, user):
     body = json.loads(request.body)
 
-    if 'action' not in request.GET:
-        action = ''
-    else:
-        action = request.GET['action']
+    action = request.GET.get('action','all')
 
     result = OrderManager(action=action, postdata=body, user=user)
     response = parse_info(result.reply())
@@ -241,12 +226,11 @@ def change_profile_view(request, user):
     body = json.loads(request.body)
     user_store_id = UserManager.get_user_store_id(user)
 
-    if 'action' not in request.GET:
-        action = 'get'
-    else:
-        action = request.GET['action']
+    action = request.GET.get('action','get')
 
-    if action is 'get':
+    print (action)
+    if action == 'get':
+        print (action)
         store_info = StoreManager.get_store_info(user_store_id)
 
         if 'message' in store_info:
@@ -256,6 +240,7 @@ def change_profile_view(request, user):
         result['message'] = 'ok'
 
     if action == 'set':
+        print (action)
         this_store = UserManager.set_user_store_profile(user, body)
         result['new_store_info'] = StoreManager.get_store_info(
             this_store.store_id)
@@ -308,12 +293,16 @@ def staff_order_view(request, action, user):
     body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
 
-    if action == 'get':
-        result = peisong.get_peisong()
+    method_name = action + '_peisong'
+    result = getattr(peisong,method_name)
 
-    if action == 'receive':
-        result = peisong.receive_peisong()
-
-    response = parse_info(result)
+    response = parse_info(result())
 
     return response
+
+
+def test_test_view(request):
+
+    action = request.GET.get('action','all')
+
+    return HttpResponse(action)
