@@ -1044,7 +1044,7 @@ class PeiSongManager(object):
     def get_pay_peisong(self):
         result = {}
         info = []
-        order_pool = Order.objects.filter(area_id=self.area_id, order_type=1)
+        order_pool = Order.objects.filter(area_id=self.area_id, order_type=1, pay_type=0)
 
         for i in order_pool:
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
