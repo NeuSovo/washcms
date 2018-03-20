@@ -1087,7 +1087,8 @@ class PeiSongManager(object):
 
         for i in info:
             goods_info = GoodsManager.get_goods_info(i)
-            result.append({'goods_name': goods_info['goods_name'],
+            result.append({'goods_id': i,
+                           'goods_name': goods_info['goods_name'],
                            'goods_spec': goods_info['goods_spec'],
                            'goods_count': info[i]})
 
