@@ -79,7 +79,7 @@ class Store(models.Model):
         (0, '日结'),
         (1, '月结'),
     )
-   # area_level = []
+    area_level = []
    # for i in DeliveryArea.area_all():
    #     area_level.append([i.id, i.area_name])
 
