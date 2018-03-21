@@ -66,12 +66,12 @@ class User(models.Model):
 class DeliveryArea(models.Model):
     area_name = models.CharField(max_length=150)
 
-   # @staticmethod
-    #def area_all():
-    #    return DeliveryArea.objects.all()
+    @staticmethod
+    def area_all():
+        return DeliveryArea.objects.all()
 
-    #def __len__(self):
-    #    return len(DeliveryArea.area_all())
+    def __len__(self):
+        return len(DeliveryArea.area_all())
 
 
 class Store(models.Model):
@@ -80,8 +80,8 @@ class Store(models.Model):
         (1, '月结'),
     )
     area_level = []
-   # for i in DeliveryArea.area_all():
-   #     area_level.append([i.id, i.area_name])
+    for i in DeliveryArea.area_all():
+        area_level.append([i.id, i.area_name])
 
     store_id = models.IntegerField(
                     primary_key=True
@@ -179,11 +179,11 @@ class Goods(models.Model):
 class StoreGoods(models.Model):
     store_level = []
     goods_level = []
-   # for i in Store.store_all():
-   #     store_level.append([i.store_id,i.store_name])
+    for i in Store.store_all():
+        store_level.append([i.store_id,i.store_name])
 
-   # for i in Goods.goods_all():
-   #     goods_level.append([i.goods_id, i.goods_name])
+    for i in Goods.goods_all():
+        goods_level.append([i.goods_id, i.goods_name])
     store_id = models.IntegerField(
                     choices=store_level,
                     null=False,
@@ -229,8 +229,8 @@ class Order(models.Model):
 
     store_level = []
     area_level = []
-   # for i in Store.store_all():
-   #     store_level.append([i.store_id,i.store_name])
+    for i in Store.store_all():
+        store_level.append([i.store_id,i.store_name])
 
     order_id = models.BigIntegerField(
                     primary_key=True
