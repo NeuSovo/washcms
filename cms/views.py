@@ -324,6 +324,24 @@ def staff_peisong_stock_view(request,action,user):
 
     return response
 
+
+@usercheck(user_type=2)
+def staff_peisong_pick_view(request, action, user):
+    result = {}
+
+    body = json.loads(request.body)
+    peisong = PeiSongManager(user=user, postdata=body)
+    try:
+        method_name = action + '_pick'
+        result = getattr(peisong, method_name)
+    except Exception as e:
+        return parse_info({'message': str(e)})
+
+    response = parse_info(result())
+
+    return response
+
+    
 def test_test_view(request):
 
     action = request.GET.get('action', 'all')

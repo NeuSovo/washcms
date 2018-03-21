@@ -288,7 +288,7 @@ class UserManager(object):
         :param user:
         :return: Courier User Area id
         """
-        return CourierProfile.objects.get(wk=user).area_id
+        return PeisongProfile.objects.get(wk=user).area_id
 
     @staticmethod
     def set_user_profile(user, profile):
@@ -341,7 +341,7 @@ class UserManager(object):
             app.info(str(e))
             return
 
-        peisong = CourierProfile.objects.get(wk=user)
+        peisong = PeisongProfile.objects.get(wk=user)
         peisong.name = profile['name']
         peisong.phone = phone
         peisong.save()
@@ -350,7 +350,7 @@ class UserManager(object):
 
     @staticmethod
     def get_user_peisong_profile(user):
-        peisong = CourierProfile.objects.get(wk=user)
+        peisong = PeisongProfile.objects.get(wk=user)
         return {'area_id': peisong.area_id,
                 'area_name': AreaManager.get_area_name(area_id=peisong.area_id),
                 'name': peisong.name,
@@ -362,11 +362,11 @@ class UserManager(object):
         set_type = 0,1,2
         """
         if set_type == 2:
-            CourierProfile(wk=user, area_id=area_id).save()
+            PeisongProfile(wk=user, area_id=area_id).save()
 
         if set_type == 4:
             if user.user_type == 2:
-                CourierProfile.objects.get(wk=user).delete()
+                PeisongProfile.objects.get(wk=user).delete()
 
         user.user_type = set_type
         user.save()
@@ -397,7 +397,7 @@ class AreaManager(object):
     def del_area(self):
         try:
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
-            if len(CourierProfile.objects.filter(area_id=self.data['id'])) != 0:
+            if len(PeisongProfile.objects.filter(area_id=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有配送员'}
             if len(Store.objects.filter(store_area=self.data['id'])) != 0:
                 return {'message': '请确保此区域下已没有商家'}
@@ -1014,6 +1014,29 @@ class PeiSongManager(object):
 
         return peisong_detail
 
+    @staticmethod
+    def get_pick_order_info(order):
+        order_info = {}
+        goods_info = []
+
+        order_info['order_id'] = order.order_id
+        order_info['create_time'] = str(order.create_time)
+        order_info['order_type'] = order.order_type
+        order_info['confirm_time'] = str(order.confirm_time)
+        order_info['is_modify'] = order.is_modify
+        
+        for i in order.get_order_detail():
+            t_info = GoodsManager.get_goods_info(i.goods_id)
+            goods_info.append({
+                'goods_id': t_info['goods_id'],
+                'goods_name': t_info['goods_name'],
+                'goods_spec': t_info['goods_spec'],
+                'goods_count': i.goods_count
+                }
+            )
+        return {'order_info': order_info,
+                'goods_info': goods_info}
+
     def get_receive_peisong(self):
         """
         [TODO] Redis
@@ -1103,3 +1126,55 @@ class PeiSongManager(object):
 
         return {'message': 'ok',
                 'info':result}
+
+    def new_pick(self):
+        order_id = OrderManager.gen_order_id()
+        pick_user = self.user
+
+        def save_pick_detail(order_id, goods_list):
+            pickorder_all_goods = []
+            for i in goods_list:
+                goods_id = i['goods_id']
+                goods_count = i['goods_count']
+                
+                try:
+                    goods_info = GoodsManager.get_goods_info(goods_id=goods_id)
+                except Exception as e:
+                    app.info(str(e))
+                    return {'message': 'goods_id does not exist'}
+
+                pickorder_all_goods.append(
+                    PickOrderDetail(
+                    order_id=order_id,
+                    goods_id=goods_id,
+                    goods_count=goods_count
+                    )
+                )
+            try:
+                PickOrderDetail.objects.bulk_create(pickorder_all_goods)
+            except Exception as e:
+                app.info(str(e))
+                return {'message': 'failed'}
+
+            return {'message': 'ok'}
+
+        info = save_pick_detail(order_id, self.data['goods_list'])
+        if info['message'] != 'ok':
+            return info
+
+        PickOrder(order_id=order_id,pick_user=self.user.wk).save()
+        info['order_id'] = order_id
+
+        return info
+
+    def get_pick(self):
+        # filter all order
+        # todo order_type = 1
+        info = []
+        order_pool = PickOrder.objects.filter(pick_user=self.user.wk)[:30]
+
+        for i in order_pool:
+            info.append(PeiSongManager.get_pick_order_info(i))
+
+        return {'message': 'ok',
+                'info': info}

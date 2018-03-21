@@ -16,7 +16,7 @@ class User(models.Model):
     )
     wk = models.CharField(
             max_length=100,
-            unique=True,
+            null=False,
             primary_key=True
         )
     user_type = models.IntegerField(
@@ -80,8 +80,8 @@ class Store(models.Model):
         (1, '月结'),
     )
     area_level = []
-    for i in DeliveryArea.area_all():
-        area_level.append([i.id, i.area_name])
+    # for i in DeliveryArea.area_all():
+    #     area_level.append([i.id, i.area_name])
 
     store_id = models.IntegerField(
                     primary_key=True
@@ -129,7 +129,7 @@ class CustomerProfile(models.Model):
             )
 
 
-class CourierProfile(models.Model):
+class PeisongProfile(models.Model):
 
     wk = models.OneToOneField(
             User,
@@ -144,6 +144,19 @@ class CourierProfile(models.Model):
             max_length=50
         )
     phone = models.BigIntegerField(
+            default=0
+        )
+
+
+class PeisongCarStock(models.Model):
+    wk = models.CharField(
+            max_length=100,
+            null=False,
+        )
+    goods_id = models.IntegerField(
+            default=0
+        )
+    goods_stock = models.IntegerField(
             default=0
         )
 
@@ -179,11 +192,11 @@ class Goods(models.Model):
 class StoreGoods(models.Model):
     store_level = []
     goods_level = []
-    for i in Store.store_all():
-        store_level.append([i.store_id,i.store_name])
+    # for i in Store.store_all():
+    #     store_level.append([i.store_id,i.store_name])
 
-    for i in Goods.goods_all():
-        goods_level.append([i.goods_id, i.goods_name])
+    # for i in Goods.goods_all():
+    #     goods_level.append([i.goods_id, i.goods_name])
     store_id = models.IntegerField(
                     choices=store_level,
                     null=False,
@@ -215,10 +228,10 @@ class Order(models.Model):
         (1, '月结')
         )
     order_type_level = (
-        (0,'已完成'),
-        (1,'待支付'),
-        (2,'待送达'),
-        (3,'已取消')
+        (0, '已完成'),
+        (1, '待支付'),
+        (2, '待送达'),
+        (3, '已取消')
         )
     pay_from_level = (
         (0, '现金'),
@@ -229,8 +242,8 @@ class Order(models.Model):
 
     store_level = []
     area_level = []
-    for i in Store.store_all():
-        store_level.append([i.store_id,i.store_name])
+    # for i in Store.store_all():
+    #     store_level.append([i.store_id,i.store_name])
 
     order_id = models.BigIntegerField(
                     primary_key=True
@@ -293,6 +306,69 @@ class OrderDetail(models.Model):
                 )
 
 
+class PickOrder(models.Model):
+
+    class Meta:
+        verbose_name = "领货订单"
+        verbose_name_plural = "PickOrders"
+        ordering = ['-create_time']
+
+    def __str__(self):
+        pass
+
+    def get_order_detail(self):
+        return PickOrderDetail.objects.filter(order_id=self.order_id)
+
+    modify_level = (
+        (0, '未被修改'),
+        (1, '被修改')
+        )
+    order_type_level = (
+        (0, '已确认'),
+        (1, '未确认')
+        )
+
+    order_id = models.BigIntegerField(
+                    primary_key=True
+                )
+    order_type = models.IntegerField(
+                choices=order_type_level,
+                default=1
+                )
+    create_time = models.DateTimeField(
+                    auto_now_add=True
+                )
+    pick_user = models.CharField(
+                    max_length=100,
+                    null=False
+                )
+    confirm_user = models.CharField(
+                    max_length=100,
+                    null=True
+                )
+    confirm_time = models.DateTimeField(
+                    null=True,
+                    blank=True
+                )
+    is_modify = models.IntegerField(
+                default=0
+                )
+    
+
+class PickOrderDetail(models.Model):
+
+    class Meta:
+        verbose_name = "PickOrderDetail"
+        verbose_name_plural = "PickOrderDetails"
+
+    def __str__(self):
+        pass
+
+    order_id = models.BigIntegerField()
+    goods_id = models.IntegerField()
+    goods_count = models.IntegerField()
+
+
 class Session(models.Model):
     session_key = models.CharField(
                     max_length=100,
@@ -306,8 +382,7 @@ class Session(models.Model):
                     max_length=100,
                     default='None',
                 )
-    expire_date = models.DateTimeField(
-              )
+    expire_date = models.DateTimeField()
 
 
 class CodeRecord(models.Model):
