@@ -487,7 +487,7 @@ class StoreManager(object):
             
             # delete Store Order and Order detail
             for i in order_pool:
-                OrderDetail.objects.filter(order_id=i).delete()
+                OrderDetail.objects.filter(order_id=i.order_id).delete()
                 i.delete()
 
             # delete Store User
@@ -611,7 +611,7 @@ class StoreManager(object):
 
     @staticmethod
     def sync_store_stock(order):
-        goods_pool = OrderDetail.objects.filter(order_id=order_id)
+        goods_pool = OrderDetail.objects.filter(order_id=order.order_id)
 
         for i in goods_pool:
             store_goods = StoreGoods.objects.get(
@@ -874,7 +874,7 @@ class OrderManager(object):
         new_order = Order(
             order_id=order_id,
             store=store,
-            user=user,
+            user=CustomerProfile.objects.get(wk=self.user),
             area=area,
             pay_type=store.store_pay_type,
             order_total_price=total_price,
@@ -919,7 +919,7 @@ class OrderManager(object):
         order_type = int(order_type)
 
         # 向上级跳 Refuse
-        if order.order_type <= order_type:
+        if order_type != 3 and order.order_type <= order_type:
             return {'message': 'failed'}
         
         # 大于取消时间 Refuse
@@ -929,6 +929,10 @@ class OrderManager(object):
 
         if order_type == 1:
             order.receive_time = datetime.now()
+            try:
+                StoreManager.sync_store_stock(order)
+            except Exception as e:
+                return {'message': 'failed'}
 
         if order_type == 0:
             order.done_time = datetime.now()
@@ -1077,14 +1081,12 @@ class PeiSongManager(object):
         if res['message'] != 'ok':
             return res
 
-        StoreManager.sync_store_stock(order)
-
         return {'message': 'ok'}
 
     def get_pay_peisong(self):
         result = {}
         info = []
-        order_pool = Order.objects.filter(area_id=self.area_id, order_type=1, pay_type=0)
+        order_pool = Order.objects.filter(area=self.area, order_type=1, pay_type=0)
 
         for i in order_pool:
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
