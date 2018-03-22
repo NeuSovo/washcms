@@ -273,22 +273,22 @@ class UserManager(object):
                 'qrcode': LoginManager.gen_base64(user.wk)}
 
     @staticmethod
-    def get_user_store_id(user):
+    def get_user_store(user):
         """
         User_type must be 3
         :param user:
         :return: Customer User store id
         """
-        return CustomerProfile.objects.get(wk=user).store_id
+        return CustomerProfile.objects.get(wk=user).store
 
     @staticmethod
-    def get_user_area_id(user):
+    def get_user_area(user):
         """
         User_type must be 2
         :param user:
         :return: Courier User Area id
         """
-        return PeisongProfile.objects.get(wk=user).area_id
+        return PeisongProfile.objects.get(wk=user).area
 
     @staticmethod
     def set_user_profile(user, profile):
@@ -308,8 +308,7 @@ class UserManager(object):
         """
         only user type is 3
         """
-        store_id = UserManager.get_user_store_id(user)
-        store = Store.objects.get(store_id=store_id)
+        store = UserManager.get_user_store(user)
 
         store.store_addr = profile['addr']
         store.store_phone = int(profile['phone'])
@@ -319,19 +318,18 @@ class UserManager(object):
         return store
 
     @staticmethod
-    def get_user_store_profile(user, profile):
+    def get_user_store_profile(user):
         """
         only user type is 3
         """
-        store_id = UserManager.get_user_store_id(user)
-        store = Store.objects.get(store_id=store_id)
+        profile = {}
+        store = UserManager.get_user_store(user)
 
-        store.store_addr = profile['addr']
-        store.store_phone = profile['phone']
-        store.store_name = profile['name']
-        store.save()
+        profile['addr'] = store.store_addr
+        profile['phone'] = store.store_phone  
+        profile['name'] = store.store_name
 
-        return store
+        return profile
 
     @staticmethod
     def set_user_peisong_profile(user, profile):
@@ -351,18 +349,18 @@ class UserManager(object):
     @staticmethod
     def get_user_peisong_profile(user):
         peisong = PeisongProfile.objects.get(wk=user)
-        return {'area_id': peisong.area_id,
-                'area_name': AreaManager.get_area_name(area_id=peisong.area_id),
+        return {'area_id': peisong.area.id,
+                'area_name': peisong.area.area_name,
                 'name': peisong.name,
                 'phone': peisong.phone}
 
     @staticmethod
-    def set_user_type(user, set_type, area_id=-1):
+    def set_user_type(user, set_type, area=None):
         """
-        set_type = 0,1,2
+        set_type = 0,1,2PeisongProfile
         """
         if set_type == 2:
-            PeisongProfile(wk=user, area_id=area_id).save()
+            PeisongProfile(wk=user, area=area).save()
 
         if set_type == 4:
             if user.user_type == 2:
@@ -397,9 +395,9 @@ class AreaManager(object):
     def del_area(self):
         try:
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
-            if len(PeisongProfile.objects.filter(area_id=self.data['id'])) != 0:
+            if len(PeisongProfile.objects.filter(area=to_delete)) != 0:
                 return {'message': '请确保此区域下已没有配送员'}
-            if len(Store.objects.filter(store_area=self.data['id'])) != 0:
+            if len(Store.objects.filter(store_area=to_delete)) != 0:
                 return {'message': '请确保此区域下已没有商家'}
 
             to_delete.delete()
@@ -426,10 +424,6 @@ class AreaManager(object):
 
         return {'message': 'ok',
                 'info': all_area_list}
-
-    @staticmethod
-    def get_area_name(area_id):
-        return DeliveryArea.objects.get(id=area_id).area_name
 
     def reply(self):
         method_name = self.action + '_area'
@@ -466,11 +460,17 @@ class StoreManager(object):
     def add_store(self):
         data = self.data
         store_id = StoreManager.gen_store_id()
+        
+        try:
+            area = DeliveryArea.objects.get(id=int(data['area']))
+        except Exception as e:
+            return {'message': 'failed'}
+
         new_store = Store(store_id=store_id,
                           store_name=data['name'],
                           # store_phone=data['phone'],
                           # store_addr=data['addr'],
-                          store_area=data['area'],
+                          store_area=area,
                           store_pay_type=data['pay_type'],
                           store_deposit=data['deposit'])
 
@@ -480,20 +480,23 @@ class StoreManager(object):
 
     def del_store(self):
         try:
-            Store.objects.get(store_id=self.data['id']).delete()
-            StoreGoods.objects.filter(store_id=self.data['id']).delete()
-            order_pool = Order.objects.filter(store_id=self.data['id'])
+            to_delete = Store.objects.get(store_id=self.data['id'])
+            StoreGoods.objects.filter(store=to_delete).delete()
+            order_pool = Order.objects.filter(store=to_delete)
+
             
             # delete Store Order and Order detail
             for i in order_pool:
-                OrderDetail.objects.filter(order_id=i.order_id).delete()
+                OrderDetail.objects.filter(order_id=i).delete()
                 i.delete()
 
             # delete Store User
-            cus_user = CustomerProfile.objects.filter(store_id=self.data['id'])
+            cus_user = CustomerProfile.objects.filter(store=to_delete)
             for i in cus_user:
                 UserManager.set_user_type(i.wk, 4)
                 i.delete()
+
+            to_delete.delete()
 
         except Exception as e:
             app.error(str(e) + '{}'.format(self.data['id']))
@@ -508,13 +511,15 @@ class StoreManager(object):
             this_store.store_name = data['name']
             # this_store.store_phone = data['phone']
             # this_store.store_addr = data['addr']
-            this_store.store_area = data['area']
+            this_store.store_area = DeliveryArea.objects.get(data['area'])
             this_store.store_pay_type = data['pay_type']
             this_store.store_deposit = data['deposit']
             this_store.save()
 
-            new_info = {'id': this_store.store_id, 'name': this_store.store_name,
-                        'area': this_store.store_area, 'pay_type': this_store.store_pay_type,
+            new_info = {'id': this_store.store_id, 
+                        'name': this_store.store_name,
+                        'area': this_store.store_area.area_name, 
+                        'pay_type': this_store.store_pay_type,
                         'deposit': this_store.store_deposit}
 
             return {'message': 'ok', 'new_info': new_info}
@@ -523,13 +528,26 @@ class StoreManager(object):
             return {'message': 'failed'}
 
     def getprice_store(self):
-        goods_list = StoreManager.get_store_price(self.data['store_id'])
+        try:
+            store = Store.objects.get(store_id=self.data['store_id'])
+        except Exception as e:
+            return {'message': 'store_id not exist'}
+
+        goods_list = StoreManager.get_store_price(store)
         return {'message': 'ok', 'goods_list': goods_list}
 
     def setprice_store(self):
-        price_list = self.data['goods_list']
-        store_id = self.data['store_id']
-        store_goods = StoreGoods.objects.filter(store_id=store_id)
+        try:
+            price_list = self.data['goods_list']
+            store_id = self.data['store_id']
+        except Exception as e:
+            return {'message': str(e)}
+
+        try:
+            store = Store.objects.get(store_id=store_id)
+            store_goods = StoreGoods.objects.filter(store=store)
+        except Exception as e:
+            return {'message': str(e)}
 
         store_goods_list = [i.goods_id for i in store_goods]
 
@@ -539,85 +557,65 @@ class StoreManager(object):
             goods_stock = goods['goods_stock']
 
             try:
-                Goods.objects.get(goods_id=goods_id)
+                t_goods = Goods.objects.get(goods_id=goods_id)
             except Exception as e:
                 app.error(str(e))
                 return {'message': 'failed'}
 
             if goods['goods_id'] not in store_goods_list:
-                new_price = StoreGoods(store_id=store_id,
-                                       goods_id=goods_id,
-                                       goods_price=goods_price,
-                                       goods_stock=goods_stock)
+                new_price = StoreGoods(store=store,
+                                       goods=t_goods,
+                                       goods_stock=goods_stock,
+                                       goods_price=goods_price)
                 new_price.save()
             else:
                 this_goods = StoreGoods.objects.get(
-                    store_id=store_id, goods_id=goods_id)
+                    store=store, goods=t_goods)
                 this_goods.goods_price = goods_price
                 this_goods.save()
 
         return {'message': 'ok'}
 
     @staticmethod
-    def get_store_area_id(store_id):
-        try:
-            store = Store.objects.get(store_id=store_id)
-            return store.store_area
-        except Exception as e:
-            app.error(str(e))
-            return None
-
-    @staticmethod
     def all_store():
         all_store = Store.store_all()
         all_store_list = []
         for store in all_store:
-            all_store_list.append(StoreManager.get_store_info(store.store_id))
+            all_store_list.append(StoreManager.get_store_info(store))
 
         return {'message': 'ok', 'info': all_store_list}
 
     @staticmethod
-    def get_store_price(store_id=0):
-        all_store_price = StoreGoods.objects.filter(store_id=store_id)
+    def get_store_price(store):
+        all_store_price = StoreGoods.objects.filter(store=store)
         result = []
         for i in all_store_price:
-            goods_info = GoodsManager.get_goods_info(goods_id=i.goods_id)
             result.append(
-                {'goods_id': i.goods_id,
-                 'goods_name': goods_info['goods_name'],
-                 'goods_spec': goods_info['goods_spec'],
+                {'goods_id': i.goods.goods_id,
+                 'goods_name': i.goods.goods_name,
+                 'goods_spec': i.goods.goods_spec,
                  'goods_price': float(i.goods_price)})
 
         return result
 
     @staticmethod
-    def get_store_pay_type(store_id):
-        return StoreManager.get_store_info(store_id)['pay_type']
+    def get_store_info(store):
+        return {'id': store.store_id,
+                'name': store.store_name,
+                'area': store.store_area.id,
+                'area_name': store.store_area.area_name,
+                'phone': store.store_phone,
+                'addr': store.store_addr,
+                'deposite': store.store_deposit,
+                'pay_type': store.store_pay_type}
 
     @staticmethod
-    def get_store_info(store_id):
-        try:
-            this_store = Store.objects.get(store_id=store_id)
-        except Exception as e:
-            app.info(str(e))
-            return {'message': 'failed'}
-
-        return {'id': this_store.store_id,
-                'name': this_store.store_name,
-                'area': this_store.store_area,
-                'area_name': AreaManager.get_area_name(this_store.store_area),
-                'phone': this_store.store_phone,
-                'addr': this_store.store_addr,
-                'deposite': this_store.store_deposit,
-                'pay_type': this_store.store_pay_type}
-
-    @staticmethod
-    def sync_store_stock(order_id, store_id):
+    def sync_store_stock(order):
         goods_pool = OrderDetail.objects.filter(order_id=order_id)
 
         for i in goods_pool:
             store_goods = StoreGoods.objects.get(
-                store_id=store_id, goods_id=i.goods_id)
+                store=order.store, goods=i.goods)
             store_goods.goods_stock += i.goods_count
             store_goods.save()
 
@@ -639,15 +637,21 @@ class EmployeeManager(object):
         self.data = postdata
 
     def settype_employee(self):
-        uid = self.data['uid']
-        set_type = self.data['set_type']
+        uid = self.data.get('uid', 0)
+        set_type = self.data.get('set_type', -1)
+
+        if set_type < 0:
+            return {'message': 'failed'}
+
         if self.data['set_type'] == 2:
-            area_id = self.data['area_id']
-            if not AreaManager.check_area_id_exist(area_id):
-                return {'message': 'area_id error'}
+            area_id = self.data.get('area_id', 0)
+            try:
+                area = DeliveryArea.objects.get(id=area_id)
+            except Exception as e:
+                return {'message': 'area not exist'}
 
         else:
-            area_id = -1
+            area = None
 
         try:
             uid = base64.b64decode(uid.encode('utf-8'))
@@ -662,7 +666,7 @@ class EmployeeManager(object):
             app.error(str(e))
             return {'message': 'failed'}
 
-        UserManager.set_user_type(user, set_type=set_type, area_id=area_id)
+        UserManager.set_user_type(user, set_type=set_type, area=area)
         return {'message': 'ok'}
 
     @staticmethod
@@ -693,15 +697,17 @@ class CustomerUserManager(object):
         self.data = postdata
         self.user = user
 
-    def bind(self, store_id):
+    def bind(self, store):
         """
         [TODO] Rebind 
         """
         user = self.user
-        new_customer = CustomerProfile(wk=user, store_id=store_id)
-        new_customer.save()
+
         if user.user_type < 3:
             return {'message': 'failed'}
+
+        new_customer = CustomerProfile(wk=user, store=store)
+        new_customer.save()
 
         user.user_type = 3
         user.save()
@@ -709,15 +715,15 @@ class CustomerUserManager(object):
         return {'message': 'ok'}
 
     def reply(self):
+        store_id = self.data.get('store_id',0)
+
         try:
-            store_id = self.data['store_id']
+            store = Store.objects.get(store_id=store_id)
         except Exception as e:
-            return {"message": 'failed'}
+            app.info(str(e))
+            return {"message": 'store_id not exist'}
 
-        if not StoreManager.check_id_exist(store_id):
-            return {'message': 'store_id not exist'}
-
-        return self.bind(store_id)
+        return self.bind(store)
 
 
 class GoodsManager(object):
@@ -823,18 +829,54 @@ class OrderManager(object):
     def save_order(self):
         user = self.user
         order_id = OrderManager.gen_order_id()
-        store_id = UserManager.get_user_store_id(user)
-        area_id = StoreManager.get_store_area_id(store_id=store_id)
+        store = UserManager.get_user_store(user)
+        area = store.store_area
         remarks = self.data['remarks']
 
-        total_price = self.save_order_detail(order_id, store_id)
+        def save_order_detail(order_id, store):
+            """
+            TODO despoit
+            """
+            pack_goods = self.data['goods_list']
+            order_all_goods = []
+            order_price = 0
+
+            for i in pack_goods:
+                goods_id = i['goods_id']
+                goods_count = i['goods_count']
+
+                goods = Goods.objects.get(goods_id=goods_id)
+                this_goods = StoreGoods.objects.get(
+                    goods=goods,
+                    store=store
+                )
+                goods_price = this_goods.goods_price * goods.goods_spec
+
+                total_price = goods_price * int(goods_count)
+                order_price += total_price
+                order_all_goods.append(
+                    OrderDetail(
+                        order_id=order_id,
+                        goods=goods,
+                        goods_count=goods_count,
+                        goods_price=goods_price,
+                        total_price=total_price
+                    )
+                )
+                # pass
+
+            OrderDetail.objects.bulk_create(order_all_goods)
+
+            return order_price
+
+        total_price = save_order_detail(order_id, store)
 
         new_order = Order(
             order_id=order_id,
-            store_id=store_id,
-            user_id=user.wk,
-            area_id=area_id,
-            pay_type=StoreManager.get_store_pay_type(store_id),
+            store=store,
+            user=user,
+            area=area,
+            pay_type=store.store_pay_type,
             order_total_price=total_price,
             order_remarks=remarks
         )
@@ -842,49 +884,15 @@ class OrderManager(object):
         new_order.save()
         return {'message': 'ok', 'order_id': order_id}
 
-    def save_order_detail(self, order_id, store_id):
-        pack_goods = self.data['goods_list']
-        order_all_goods = []
-        order_price = 0
-
-        for i in pack_goods:
-            goods_id = i['goods_id']
-            goods_count = i['goods_count']
-
-            goods_info = GoodsManager.get_goods_info(goods_id=goods_id)
-            this_goods = StoreGoods.objects.get(
-                goods_id=goods_id,
-                store_id=store_id
-            )
-            goods_price = this_goods.goods_price * goods_info['goods_spec']
-
-            total_price = goods_price * int(goods_count)
-            order_price += total_price
-            order_all_goods.append(
-                OrderDetail(
-                    order_id=order_id,
-                    goods_id=goods_id,
-                    goods_count=goods_count,
-                    goods_price=goods_price,
-                    total_price=total_price
-                )
-            )
-            # pass
-
-        OrderDetail.objects.bulk_create(order_all_goods)
-
-        return order_price
-
     @staticmethod
     def get_order_goods_detail(order_id):
         result = []
         goods = OrderDetail.objects.filter(order_id=order_id)
 
         for i in goods:
-            goods_info = GoodsManager.get_goods_info(i.goods_id)
-            result.append({'goods_id': i.goods_id,
-                           'goods_name': goods_info['goods_name'],
-                           'goods_spec': goods_info['goods_spec'],
+            result.append({'goods_id': i.goods.goods_id,
+                           'goods_name': i.goods.goods_name,
+                           'goods_spec': i.goods.goods_spec,
                            'goods_count': i.goods_count,
                            'total_price': str(i.total_price)})
 
@@ -906,23 +914,20 @@ class OrderManager(object):
         }
 
     @staticmethod
-    def set_order_status(order_id, order_type,pay_from = None):
+    def set_order_status(order, order_type,pay_from = None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
-        try:
-            order = Order.objects.get(order_id=order_id)
-        except Exception as e:
-            app.info(str(e))
-            return {'message': str(e)}
 
-
+        # 向上级跳 Refuse
+        if order.order_type <= order_type:
+            return {'message': 'failed'}
+        
+        # 大于取消时间 Refuse
         if order_type == 3:
             if datetime.now() - order.create_time > max_cancel_minutes:
                 return {'message': 'failed'}
 
         if order_type == 1:
-            if order.order_type <= 1:
-                return {'message': 'failed'}
             order.receive_time = datetime.now()
 
         if order_type == 0:
@@ -953,19 +958,24 @@ class OrderManager(object):
                 'goods': order_goods}
 
     def cancel_order(self):
-        order_id = self.data['order_id']
-        return OrderManager.set_order_status(order_id, 3)
+        order_id = self.data.get('order_id',0)
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
+
+        return OrderManager.set_order_status(order, 3)
 
     def status_order(self):
         status = self.data['status']
-        store_id = UserManager.get_user_store_id(user=self.user)
+        store = UserManager.get_user_store(user=self.user)
         status_order = []
 
         if int(status) > 3:
             return {'message': 'failed'}
 
         order_list = Order.objects.filter(
-            store_id=store_id, order_type=status)[:30]
+            store=store, order_type=status)[:30]
 
         for i in order_list:
             status_order.append(
@@ -987,12 +997,12 @@ class PeiSongManager(object):
     def __init__(self, user, postdata):
         self.user = user
         self.data = postdata
-        self.area_id = UserManager.get_user_area_id(user)
+        self.area = UserManager.get_user_area(user)
 
     @staticmethod
     def get_peisong_order_info(order):
         peisong_detail = {}
-        store_info = StoreManager.get_store_info(store_id=order.store_id)
+        store_info = StoreManager.get_store_info(store=order.store)
         goods_info = OrderManager.get_order_goods_detail(
             order_id=order.order_id)
 
@@ -1026,11 +1036,10 @@ class PeiSongManager(object):
         order_info['is_modify'] = order.is_modify
         
         for i in order.get_order_detail():
-            t_info = GoodsManager.get_goods_info(i.goods_id)
             goods_info.append({
-                'goods_id': t_info['goods_id'],
-                'goods_name': t_info['goods_name'],
-                'goods_spec': t_info['goods_spec'],
+                'goods_id': i.goods.goods_id,
+                'goods_name': i.goods.goods_name,
+                'goods_spec': i.goods.goods_spec,
                 'goods_count': i.goods_count
                 }
             )
@@ -1044,7 +1053,7 @@ class PeiSongManager(object):
         """
         result = {}
         info = []
-        order_pool = Order.objects.filter(area_id=self.area_id, order_type=2)
+        order_pool = Order.objects.filter(area=self.area, order_type=2)
 
         for i in order_pool:
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
@@ -1058,13 +1067,17 @@ class PeiSongManager(object):
 
     def set_receive_peisong(self):
         order_id = self.data.get('order_id',0)
+        
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
 
-        res = OrderManager.set_order_status(order_id, 1)
+        res = OrderManager.set_order_status(order, 1)
         if res['message'] != 'ok':
             return res
 
-        StoreManager.sync_store_stock(
-            order_id, Order.objects.get(order_id=order_id).store_id)
+        StoreManager.sync_store_stock(order)
 
         return {'message': 'ok'}
 
@@ -1092,7 +1105,12 @@ class PeiSongManager(object):
         order_id = self.data.get('order_id',0)
         pay_from = self.data.get('pay_from',None)
 
-        res = OrderManager.set_order_status(order_id, 0, pay_from=pay_from)
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
+        
+        res = OrderManager.set_order_status(order, 0, pay_from=pay_from)
         
         if res['message'] != 'ok':
             return res
@@ -1104,7 +1122,7 @@ class PeiSongManager(object):
 
     def get_ps_stock(self):
         # pass
-        order_pool = Order.objects.filter(area_id=self.area_id, order_type=2)
+        order_pool = Order.objects.filter(area=self.area, order_type=2)
         info = {}
         result = []
         for i in order_pool:
@@ -1138,7 +1156,7 @@ class PeiSongManager(object):
                 goods_count = i['goods_count']
                 
                 try:
-                    goods_info = GoodsManager.get_goods_info(goods_id=goods_id)
+                    goods = Goods.objects.get(goods_id=goods_id)
                 except Exception as e:
                     app.info(str(e))
                     return {'message': 'goods_id does not exist'}
@@ -1146,14 +1164,14 @@ class PeiSongManager(object):
                 pickorder_all_goods.append(
                     PickOrderDetail(
                     order_id=order_id,
-                    goods_id=goods_id,
+                    goods=goods,
                     goods_count=goods_count
                     )
                 )
             try:
                 PickOrderDetail.objects.bulk_create(pickorder_all_goods)
             except Exception as e:
-                app.info(str(e))
+                app.error(str(e))
                 return {'message': 'failed'}
 
             return {'message': 'ok'}
@@ -1199,6 +1217,26 @@ class KuGuanManager(object):
 
         return {'message': 'ok',
                 'info': info}
+
+    def confirm_pick(self):
+        order_id = self.data.get('order_id',0)
+
+        try:
+            order = PickOrder.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
+
+
+        # if 'goods_list' in self.data:
+        #     order.is_modify = 1
+        #     for i in order.get_order_detail():
+
+        #         i.goods_id = self.data['goods_list'][]
+
+
+
+
+
 
 
 

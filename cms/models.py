@@ -7,6 +7,11 @@ from datetime import datetime,timedelta
 
 class User(models.Model):
 
+    class Meta:
+        verbose_name = "所有用户"
+        verbose_name_plural = "Users"
+        ordering = ['-last_login']
+
     type_level = (
         (0, u'管理员'),
         (1, u'库管'),
@@ -59,11 +64,14 @@ class User(models.Model):
     def __str__(self):
         return '%s : %s' % (self.nick_name, self.type_level[self.user_type])
 
-    class Meta:
-        ordering = ['-last_login']
 
 
 class DeliveryArea(models.Model):
+
+    class Meta:
+        verbose_name = "配送区域"
+        verbose_name_plural = "DeliveryArea"
+
     area_name = models.CharField(max_length=150)
 
     @staticmethod
@@ -75,6 +83,10 @@ class DeliveryArea(models.Model):
 
 
 class Store(models.Model):
+    class Meta:
+        verbose_name = "商户"
+        verbose_name_plural = "Store"
+
     pay_type_level = (
         (0, '日结'),
         (1, '月结'),
@@ -97,9 +109,9 @@ class Store(models.Model):
                     max_length=150,
                     default='无'
                 )
-    store_area = models.IntegerField(
-                    default=0,
-                    choices=area_level
+    store_area = models.ForeignKey(
+                    DeliveryArea,
+                    on_delete=models.CASCADE
                 )
     store_pay_type = models.IntegerField(
                     default=0,
@@ -119,25 +131,35 @@ class Store(models.Model):
 
 class CustomerProfile(models.Model):
 
+    class Meta:
+        verbose_name = "顾客资料"
+        verbose_name_plural = "CustomerProfiles"
+
     wk = models.OneToOneField(
                 User,
                 on_delete=models.CASCADE,
                 primary_key=True
             )
-    store_id = models.IntegerField(
-                default=-1
+    store = models.ForeignKey(
+                Store,
+                on_delete=models.CASCADE
             )
 
 
 class PeisongProfile(models.Model):
+
+    class Meta:
+        verbose_name = "配送员资料"
+        verbose_name_plural = "PeisongProfile"
 
     wk = models.OneToOneField(
             User,
             on_delete=models.CASCADE,
             primary_key=True
         )
-    area_id = models.IntegerField(
-            default=-1
+    area = models.ForeignKey(
+            DeliveryArea,
+            on_delete=models.CASCADE
         )
     name = models.CharField(
             default='peisong_name',
@@ -151,20 +173,12 @@ class PeisongProfile(models.Model):
         return '{},{},{}'.format(self.wk,self.name,self.area_id)
 
 
-class PeisongCarStock(models.Model):
-    wk = models.CharField(
-            max_length=100,
-            null=False,
-        )
-    goods_id = models.IntegerField(
-            default=0
-        )
-    goods_stock = models.IntegerField(
-            default=0
-        )
-
-
 class Goods(models.Model):
+
+    class Meta:
+        verbose_name = "商品列表"
+        verbose_name_plural = "Goodss"
+
     recover_level = (
         (0, '回收'),
         (1, '不回收')
@@ -192,7 +206,31 @@ class Goods(models.Model):
         return Goods.objects.all()
 
 
+class PeisongCarStock(models.Model):
+
+    class Meta:
+        verbose_name = "配送员车上货物"
+        verbose_name_plural = "PeisongCarStocks"
+
+    wk = models.ForeignKey(
+            PeisongProfile,
+            on_delete=models.CASCADE
+        )
+    goods_id = models.ForeignKey(
+            Goods,
+            on_delete=models.CASCADE
+        )
+    goods_stock = models.IntegerField(
+            default=0
+        )
+
+
 class StoreGoods(models.Model):
+
+    class Meta:
+        verbose_name = "商户货物"
+        verbose_name_plural = "StoreGoodss"
+
     store_level = []
     goods_level = []
     # for i in Store.store_all():
@@ -200,15 +238,13 @@ class StoreGoods(models.Model):
 
     # for i in Goods.goods_all():
     #     goods_level.append([i.goods_id, i.goods_name])
-    store_id = models.IntegerField(
-                    choices=store_level,
-                    null=False,
-                    blank=True
+    store = models.ForeignKey(
+                    Store,
+                    on_delete=models.CASCADE
                 )
-    goods_id = models.IntegerField(
-                    choices=goods_level,
-                    null=False,
-                    blank=True
+    goods = models.ForeignKey(
+                    Goods,
+                    on_delete=models.CASCADE
                 )
     goods_stock = models.IntegerField(
                     default=0
@@ -226,6 +262,15 @@ class StoreGoods(models.Model):
 
 
 class Order(models.Model):
+
+    class Meta:
+        verbose_name = "商户订单"
+        verbose_name_plural = "Orders"
+        ordering = ['-create_time']
+
+    def get_order_detail(self):
+        return OrderDetail.objects.filter(order_id=self.order_id)   
+
     pay_type_level = (
         (0, '日结'),
         (1, '月结')
@@ -254,15 +299,17 @@ class Order(models.Model):
     create_time = models.DateTimeField(
                     auto_now_add=True
                 )
-    store_id = models.IntegerField(
-                    choices=store_level,
-                    blank=False
+    store = models.ForeignKey(
+                    Store,
+                    on_delete=models.CASCADE
                 )
-    user_id = models.CharField(
-                    max_length=155
+    user = models.ForeignKey(
+                    CustomerProfile,
+                    on_delete=models.CASCADE
                 )
-    area_id = models.IntegerField(
-                    blank=False
+    area = models.ForeignKey(
+                    DeliveryArea,
+                    on_delete=models.CASCADE
                 )
     order_type = models.IntegerField(
                 choices=order_type_level,
@@ -273,12 +320,12 @@ class Order(models.Model):
                 blank=True
                 )
     pay_type = models.IntegerField(
-                    choices=pay_type_level,  
-                    default=0
+                choices=pay_type_level,  
+                default=0
                 )
     pay_from = models.IntegerField(
-                    choices=pay_from_level,
-                    default=3
+                choices=pay_from_level,
+                default=3
                 )
     order_total_price = models.DecimalField(
                     max_digits=8,
@@ -291,13 +338,20 @@ class Order(models.Model):
                     null=True,
                     blank=True
                 )
-    class Meta:
-        ordering = ['-create_time']
 
 
 class OrderDetail(models.Model):
-    order_id = models.BigIntegerField()
-    goods_id = models.IntegerField()
+
+    class Meta:
+        verbose_name = "订单详情"
+        verbose_name_plural = "OrderDetails"
+
+    order_id = models.BigIntegerField(null=True)
+
+    goods = models.ForeignKey(
+                Goods,
+                on_delete=models.CASCADE
+            )
     goods_count = models.IntegerField()
     goods_price = models.DecimalField(
                     max_digits=8,
@@ -368,8 +422,11 @@ class PickOrderDetail(models.Model):
     def __str__(self):
         pass
 
-    order_id = models.BigIntegerField()
-    goods_id = models.IntegerField()
+    order_id = models.BigIntegerField(null=True)
+    goods = models.ForeignKey(
+            Goods,
+            on_delete=models.CASCADE 
+        )
     goods_count = models.IntegerField()
 
 

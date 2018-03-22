@@ -191,9 +191,9 @@ def get_user_goods_view(request, user):
 
     body = json.loads(request.body)
 
-    user_store_id = UserManager.get_user_store_id(user)
+    user_store = UserManager.get_user_store(user)
     result['message'] = 'ok'
-    goods_list = StoreManager.get_store_price(user_store_id)
+    goods_list = StoreManager.get_store_price(user_store)
 
     for i, item in enumerate(goods_list):
         goods_info = GoodsManager.get_goods_info(item['goods_id'])
@@ -224,13 +224,13 @@ def order_view(request, user):
 def change_profile_view(request, user):
     result = {}
     body = json.loads(request.body)
-    user_store_id = UserManager.get_user_store_id(user)
+    user_store = UserManager.get_user_store(user)
 
     action = request.GET.get('action', 'get')
 
     if action == 'get':
         print(action)
-        store_info = StoreManager.get_store_info(user_store_id)
+        store_info = StoreManager.get_store_info(user_store)
 
         if 'message' in store_info:
             return store_info
@@ -241,7 +241,7 @@ def change_profile_view(request, user):
     if action == 'set':
         this_store = UserManager.set_user_store_profile(user, body)
         result['new_store_info'] = StoreManager.get_store_info(
-            this_store.store_id)
+            this_store)
         result['message'] = 'ok'
 
     response = parse_info(result)
