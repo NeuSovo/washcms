@@ -184,7 +184,7 @@ class WechatSdk(object):
 
         this_user.we_ss_key = self.wxsskey
         this_user.session_data = sess
-        this_user.expire_date = datetime.now() + timedelta(30)
+        this_user.expire_date = datetime.now() + timedelta(days=3)
         this_user.save()
 
         # 刷新Cookie成功
@@ -1129,7 +1129,7 @@ class PeiSongManager(object):
 
     def new_pick(self):
         order_id = OrderManager.gen_order_id()
-        pick_user = self.user
+        pick_user = PeisongProfile.objects.get(wk=self.user)
 
         def save_pick_detail(order_id, goods_list):
             pickorder_all_goods = []
@@ -1162,7 +1162,7 @@ class PeiSongManager(object):
         if info['message'] != 'ok':
             return info
 
-        PickOrder(order_id=order_id,pick_user=self.user.wk).save()
+        PickOrder(order_id=order_id,pick_user=pick_user).save()
         info['order_id'] = order_id
 
         return info
@@ -1171,10 +1171,39 @@ class PeiSongManager(object):
         # filter all order
         # todo order_type = 1
         info = []
-        order_pool = PickOrder.objects.filter(pick_user=self.user.wk)[:30]
+        pick_user = PeisongProfile.objects.get(wk=self.user)
+        order_pool = PickOrder.objects.filter(pick_user=pick_user)[:30]
 
         for i in order_pool:
             info.append(PeiSongManager.get_pick_order_info(i))
 
         return {'message': 'ok',
                 'info': info}
+
+
+class KuGuanManager(object):
+    """docstring for KuGuanManager"""
+    def __init__(self, postdata, user):
+        self.data = postdata
+        self.user = user
+
+    def get_pick(self):
+        order_pool = PickOrder.objects.filter(order_type=1)
+        info = []
+        for i in order_pool:
+            t_info = PeiSongManager.get_pick_order_info(i)
+            t_info['user_info']  = {}
+            t_info['user_info']['user_name'] = i.pick_user.name
+            t_info['user_info']['user_phone'] = i.pick_user.phone
+            info.append(t_info)
+
+        return {'message': 'ok',
+                'info': info}
+
+
+
+
+
+
+
+        

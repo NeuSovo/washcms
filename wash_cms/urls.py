@@ -42,7 +42,7 @@ urlpatterns = [
     path('user/order/<str:action>', order_2_view),
     path('user/order/<str:action>/<int:status>', order_2_view),
 
-    # path('staff/kuguan/pick/<str:action>', ), # get confirm
+    path('staff/kuguan/pick/<str:action>', staff_kuguan_pick_view), # get confirm
     # path('staff/kuguan/stock/<str:action>', ) # ([get] store,depot,peisong),([set] depot stock, +=)
 
     path('staff/peisong/profile/<str:action>', staff_profile_view),# get,update

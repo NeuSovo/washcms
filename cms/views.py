@@ -7,7 +7,7 @@ from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
                         usercheck, EmployeeManager, CustomerUserManager, GoodsManager,
-                        OrderManager, PeiSongManager)
+                        OrderManager, PeiSongManager, KuGuanManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -341,7 +341,26 @@ def staff_peisong_pick_view(request, action, user):
 
     return response
 
-    
+
+@usercheck(user_type=1)
+def staff_kuguan_pick_view(request, action, user):
+    result = {}
+
+    body = json.loads(request.body)
+    peisong = KuGuanManager(user=user, postdata=body)
+    try:
+        method_name = action + '_pick'
+        result = getattr(peisong, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
+
 def test_test_view(request):
 
     action = request.GET.get('action', 'all')
