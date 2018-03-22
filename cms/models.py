@@ -147,6 +147,9 @@ class PeisongProfile(models.Model):
             default=0
         )
 
+    def __str__(self):
+        return '{},{},{}'.format(self.wk,self.name,self.area_id)
+
 
 class PeisongCarStock(models.Model):
     wk = models.CharField(
@@ -317,7 +320,7 @@ class PickOrder(models.Model):
         pass
 
     def get_order_detail(self):
-        return PickOrderDetail.objects.filter(order_id=self.order_id)
+        return PickOrderDetail.objects.filter(order_id=self.order_id)    
 
     modify_level = (
         (0, '未被修改'),
@@ -338,13 +341,14 @@ class PickOrder(models.Model):
     create_time = models.DateTimeField(
                     auto_now_add=True
                 )
-    pick_user = models.CharField(
-                    max_length=100,
-                    null=False
+    pick_user = models.ForeignKey(
+                    PeisongProfile,
+                    on_delete=models.CASCADE
                 )
-    confirm_user = models.CharField(
-                    max_length=100,
-                    null=True
+    confirm_user = models.ForeignKey(
+                    User,
+                    null=True,
+                    on_delete=models.CASCADE
                 )
     confirm_time = models.DateTimeField(
                     null=True,
