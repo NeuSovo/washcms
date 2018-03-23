@@ -111,21 +111,34 @@ class GoodsAdmin(admin.ModelAdmin):
 
 class OrderDetailAdmin(admin.ModelAdmin):
     model = OrderDetail
-    verbose_name = '商家用户信息'
+    verbose_name = '订单详情'
     can_delete = True
 
 
 class OrderAdmin(admin.ModelAdmin):
-    readonly_fields = ('user_id', 'store_id', 'area_id', 'order_id',
+    def store_name(self,Order):
+        return u'%s' % (Order.store.store_name,)
+
+    def area_name(self,Order):
+        return u'%s' % (Order.area.area_name,)
+    readonly_fields = ('user', 'store', 'area', 'order_id',
                        'create_time', 'done_time', 'order_total_price')
-    list_display = ('order_type','create_time', 'store_id', 'pay_type',
-                    'pay_from', 'order_total_price')
+
+    list_display = ('order_type','create_time', 'store_name', 'pay_type',
+                    'pay_from', 'order_total_price','area_name')
 
     list_filter = ('order_type', 'pay_type','pay_from')
 
 class StoreGoodsAdmin(admin.ModelAdmin):
-    readonly_fields = ('store_id', 'goods_id')
-    list_display = ('store_id', 'goods_id', 'goods_price', 'goods_stock')
+
+    def goods_name(self,storegoods):
+        return u'%s(%s)' % (storegoods.goods.goods_name,storegoods.goods.goods_spec)
+
+    def store_name(self,storegoods):
+        return u'%s' % (storegoods.store.store_name,)
+
+    readonly_fields = ('store', 'goods')
+    list_display = ('store_name', 'goods_name', 'goods_price', 'goods_stock')
 
 
 admin.site.register(StoreGoods, StoreGoodsAdmin)

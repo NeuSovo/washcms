@@ -6,7 +6,6 @@ import base64
 import random
 import logging
 import requests
-from operator import itemgetter 
 from hashlib import sha256, md5
 
 from django.db.models import Q
@@ -53,11 +52,11 @@ def usercheck(user_type=-1):
                 action = kwargs['action']
             else:
                 action = 'None'
+            
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
             except Exception as e:
-                app.info("1" + str(e))
                 result['code'] = ASEC.ERROR_PARAME
                 result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
                 response = parse_info(result)
@@ -68,7 +67,6 @@ def usercheck(user_type=-1):
             try:
                 user_key = Session.objects.get(session_data=wckey)
             except Exception as e:
-                app.info(str(e) + 'wckey:{}'.format(wckey))
                 result['code'] = ASEC.SESSION_NOT_WORK
                 result['message'] = ASEC.getMessage(ASEC.SESSION_NOT_WORK)
 
@@ -133,7 +131,7 @@ class WechatSdk(object):
             data = requests.get(
                 'https://api.weixin.qq.com/sns/jscode2session', params=params)
         except Exception as e:
-            app.error(str(e) + '\tcode:' + str(self.code))
+            app.error(str(e))
             return False
 
         info = data.json()
@@ -157,7 +155,7 @@ class WechatSdk(object):
 
     def save_user(self):
         have_user = User.objects.filter(wk=self.openid)
-        if len(have_user) != 0:
+        if have_user.exists():
             # 已注册过
             return self.flush_session()
 
@@ -179,7 +177,11 @@ class WechatSdk(object):
                 'message': ASEC.getMessage(ASEC.REG_SUCCESS)}
 
     def flush_session(self):
-        this_user = Session.objects.get(session_key=self.openid)
+        try:
+            this_user = Session.objects.get(session_key=self.openid)
+        except Exception as e:
+            this_user = Session()
+
         sess = WechatSdk.gen_hash()
 
         this_user.we_ss_key = self.wxsskey
@@ -395,9 +397,10 @@ class AreaManager(object):
     def del_area(self):
         try:
             to_delete = DeliveryArea.objects.get(id=self.data['id'])
-            if len(PeisongProfile.objects.filter(area=to_delete)) != 0:
+            if PeisongProfile.objects.filter(area=to_delete).exists():
                 return {'message': '请确保此区域下已没有配送员'}
-            if len(Store.objects.filter(store_area=to_delete)) != 0:
+
+            if Store.objects.filter(store_area=to_delete).exists():
                 return {'message': '请确保此区域下已没有商家'}
 
             to_delete.delete()
@@ -1223,27 +1226,5 @@ class KuGuanManager(object):
     def confirm_pick(self):
         order_id = self.data.get('order_id',0)
 
-        try:
-            order = PickOrder.objects.get(order_id=order_id)
-        except Exception as e:
-            return {'message': 'order_id failed'}
+        order = PickOrder.objects.get('')
 
-
-        # if 'goods_list' in self.data:
-        #     order.is_modify = 1
-        #     for i in order.get_order_detail():
-
-        #         i.goods_id = self.data['goods_list'][]
-
-
-
-
-
-
-
-
-
-
-
-
-        
