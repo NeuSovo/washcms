@@ -170,7 +170,7 @@ class PeisongProfile(models.Model):
         )
 
     def __str__(self):
-        return '{},{},{}'.format(self.wk,self.name,self.area_id)
+        return '{},{}'.format(self.name,self.area_id)
 
 
 class Goods(models.Model):
@@ -368,10 +368,7 @@ class PickOrder(models.Model):
     class Meta:
         verbose_name = "领货订单"
         verbose_name_plural = "PickOrders"
-        ordering = ['-create_time']
-
-    def __str__(self):
-        pass
+        ordering = ['-create_time'] 
 
     def get_order_detail(self):
         return PickOrderDetail.objects.filter(order_id=self.order_id)    
