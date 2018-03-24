@@ -80,7 +80,6 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ('wk', 'nick_name', 'get_user_type','last_login')
 
     list_filter = (UserTypeFilter,)
-    inlines = (UserProfileAdmin,)
 
 
 class StoreAdmin(admin.ModelAdmin):
@@ -110,9 +109,11 @@ class GoodsAdmin(admin.ModelAdmin):
 
 
 class OrderDetailAdmin(admin.ModelAdmin):
-    model = OrderDetail
-    verbose_name = '订单详情'
-    can_delete = True
+    def goods_name(self,OrderDetail):
+        return u'%s(%s)' % (OrderDetail.goods.goods_name,OrderDetail.goods.goods_spec)
+
+    list_display = ('order_id','goods_name', 'goods_count', 'goods_price',
+                    'total_price')
 
 
 class OrderAdmin(admin.ModelAdmin):
@@ -141,6 +142,7 @@ class StoreGoodsAdmin(admin.ModelAdmin):
     list_display = ('store_name', 'goods_name', 'goods_price', 'goods_stock')
 
 
+admin.site.register(OrderDetail, OrderDetailAdmin)
 admin.site.register(StoreGoods, StoreGoodsAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(Goods, GoodsAdmin)
