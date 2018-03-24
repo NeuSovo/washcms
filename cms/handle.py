@@ -982,7 +982,7 @@ class OrderManager(object):
             return {'message': 'failed'}
 
         order_list = Order.objects.filter(
-            store=store, order_type=status)[:30]
+            store=store, order_type=status)
 
         for i in order_list:
             status_order.append(
@@ -1128,24 +1128,20 @@ class PeiSongManager(object):
     def get_ps_stock(self):
         # pass
         order_pool = Order.objects.filter(area=self.area, order_type=2)
-        info = {}
         result = []
-        for i in order_pool:
-            goods_info = OrderManager.get_order_goods_detail(
-            order_id=i.order_id)
-            for j in goods_info:
-                goods_id = j['goods_id']
-                if goods_id in info:
-                    info[goods_id] += j['goods_count']
-                else:
-                    info[goods_id] = j['goods_count']
+
+        info = OrderDetail.objects.raw('select 1 as id,goods_id,sum(goods_count) as goods_count \
+                                        from cms_orderdetail where cms_orderdetail.order_id in \
+                                        (select order_id from cms_order where order_type={} and area_id={}) \
+                                        group by cms_orderdetail.goods_id'.format(2,self.area.id))
+
 
         for i in info:
-            goods_info = GoodsManager.get_goods_info(i)
-            result.append({'goods_id': i,
+            goods_info = GoodsManager.get_goods_info(i.goods_id)
+            result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
                            'goods_spec': goods_info['goods_spec'],
-                           'goods_count': info[i]})
+                           'goods_count': int(i.goods_count)})
 
         return {'message': 'ok',
                 'info':result}
@@ -1195,7 +1191,7 @@ class PeiSongManager(object):
         # todo order_type = 1
         info = []
         pick_user = PeisongProfile.objects.get(wk=self.user)
-        order_pool = PickOrder.objects.filter(pick_user=pick_user)[:30]
+        order_pool = PickOrder.objects.filter(pick_user=pick_user)
 
         for i in order_pool:
             info.append(PeiSongManager.get_pick_order_info(i))
