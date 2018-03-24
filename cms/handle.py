@@ -514,7 +514,7 @@ class StoreManager(object):
             this_store.store_name = data['name']
             # this_store.store_phone = data['phone']
             # this_store.store_addr = data['addr']
-            this_store.store_area = DeliveryArea.objects.get(data['area'])
+            this_store.store_area = DeliveryArea.objects.get(id=data['area'])
             this_store.store_pay_type = data['pay_type']
             this_store.store_deposit = data['deposit']
             this_store.save()
@@ -739,10 +739,26 @@ class GoodsManager(object):
 
 
     @staticmethod
-    def sync_goods_stock():
-        #TODO
-        # TODAY
-        pass    
+    def sync_goods_stock(order):
+        goods_pool = PickOrderDetail.objects.filter(order_id=order.order_id)
+        try:         
+            for i in goods_pool:
+                i.goods.goods_stock -= i.goods_count
+
+                try:
+                    car_goods = PeisongCarStock.objects.get(wk=order.pick_user,goods=i.goods)
+                    car_goods.goods_stock += i.goods_count
+                    car_goods.save()
+                except:
+                    car_goods = PeisongCarStock(wk=order.pick_user,goods=i.goods,goods_stock=i.goods_count)
+                    car_goods.save()
+                
+                i.goods.save()
+        except Exception as e:
+            app.error(str(e))
+            return {'message': (str(e))}
+
+        return {'message': 'ok'}
 
     def add_goods(self):
         goods_name = self.data['name']
@@ -1222,5 +1238,18 @@ class KuGuanManager(object):
     def confirm_pick(self):
         order_id = self.data.get('order_id',0)
 
-        order = PickOrder.objects.get('')
+        try:
+            order = PickOrder.objects.get(order_id=order_id)
+        except :
+            return {'message': 'order_id error'}
 
+        # todo goods_list
+
+        info = sync_goods_stock(order)
+        if info['message'] == 'ok':
+            order.order_type = 0
+            order.confirm_time = datetime.now()
+            order.confirm_user = self.user
+            order.save()
+
+        return info 
