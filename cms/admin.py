@@ -86,7 +86,10 @@ class StoreAdmin(admin.ModelAdmin):
     '''
         Admin View for Store
     '''
-    list_display = ('store_id', 'store_name', 'store_area', 'store_pay_type')
+    def area_name(self,Store):
+        return u'%s' % (Store.store_area.area_name,)
+
+    list_display = ('store_id', 'store_name', 'area_name', 'store_pay_type')
     list_filter = ('store_pay_type', 'store_area')
     # inlines = [
     #     Inline,

@@ -216,7 +216,7 @@ class PeisongCarStock(models.Model):
             PeisongProfile,
             on_delete=models.CASCADE
         )
-    goods_id = models.ForeignKey(
+    goods = models.ForeignKey(
             Goods,
             on_delete=models.CASCADE
         )

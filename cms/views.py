@@ -283,6 +283,19 @@ def staff_profile_view(request, action, user):
 
     return response
 
+@usercheck(user_type=2)
+def staff_goods_view(request, action, user):
+    result = {}
+
+    body = json.loads(request.body)
+
+    if action == 'all':
+        result =  GoodsManager.all_goods()
+
+    response = parse_info(result)
+
+    return response
+
 
 @usercheck(user_type=2)
 def staff_peisong_order_view(request, status, action, user):

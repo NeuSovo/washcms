@@ -42,6 +42,7 @@ urlpatterns = [
     path('user/order/<str:action>', order_2_view),
     path('user/order/<str:action>/<int:status>', order_2_view),
 
+    path('staff/goods/<str:action>', staff_goods_view), # get,
     path('staff/kuguan/pick/<str:action>', staff_kuguan_pick_view), # get confirm
     # path('staff/kuguan/stock/<str:action>', ) # ([get] store,depot,peisong),([set] depot stock, +=)
 
