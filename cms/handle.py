@@ -618,11 +618,14 @@ class StoreManager(object):
 
     @staticmethod
     def sync_store_stock(order):
+        # TODO
+        # Sync Car Stock
         goods_pool = OrderDetail.objects.filter(order_id=order.order_id)
 
         for i in goods_pool:
             store_goods = StoreGoods.objects.get(
                 store=order.store, goods=i.goods)
+            car_goods = PeisongCarStock.objects.get()
             store_goods.goods_stock += i.goods_count
             store_goods.save()
 
@@ -943,6 +946,7 @@ class OrderManager(object):
             if datetime.now() - order.create_time > max_cancel_minutes:
                 return {'message': 'failed'}
 
+        # 待支付
         if order_type == 1:
             order.receive_time = datetime.now()
             try:
