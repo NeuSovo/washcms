@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile, Store, DeliveryArea, Goods, Order, OrderDetail, StoreGoods
+from cms.models import CodeRecord, User, CustomerProfile, Store, DeliveryArea, Goods, Order, OrderDetail, StoreGoods,CustomerProfile,PeisongProfile,PickOrder
 # Register your models here.
 
 
@@ -14,10 +14,24 @@ class CodeRecordAdmin(admin.ModelAdmin):
     # search_fields = ('',)
 
 
-class UserProfileAdmin(admin.StackedInline):
-    model = CustomerProfile
-    verbose_name = '商家用户信息'
-    can_delete = True
+class StoreUserAdmin(admin.ModelAdmin):
+    '''
+        Admin View for StoreUser
+    '''
+    def store_name(self,cu):
+        return u'%s' % (cu.store.store_name,)
+
+    list_display = ('wk','store_name')
+
+
+class PeiSongUserAdmin(admin.ModelAdmin):
+    '''
+        Admin View for PeiSongUser
+    '''
+    def area_name(self,pu):
+        return u'%s' % (pu.area.area_name,)
+
+    list_display = ('wk','area_name','name','phone')
 
 
 class UserTypeFilter(admin.SimpleListFilter):
@@ -133,6 +147,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     list_filter = ('order_type', 'pay_type','pay_from')
 
+
 class StoreGoodsAdmin(admin.ModelAdmin):
 
     def goods_name(self,storegoods):
@@ -145,6 +160,17 @@ class StoreGoodsAdmin(admin.ModelAdmin):
     list_display = ('store_name', 'goods_name', 'goods_price', 'goods_stock')
 
 
+class PickOrderAdmin(admin.ModelAdmin):
+    '''
+        Admin View for PickOrder
+    '''
+
+    list_display = ('order_type', 'create_time', 'pick_user', 'confirm_time')
+
+
+admin.site.register(PickOrder, PickOrderAdmin)
+admin.site.register(PeisongProfile, PeiSongUserAdmin)
+admin.site.register(CustomerProfile, StoreUserAdmin)
 admin.site.register(OrderDetail, OrderDetailAdmin)
 admin.site.register(StoreGoods, StoreGoodsAdmin)
 admin.site.register(Order, OrderAdmin)

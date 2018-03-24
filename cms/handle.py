@@ -366,8 +366,12 @@ class UserManager(object):
 
         if set_type == 4:
             if user.user_type == 2:
-                PeisongProfile.objects.get(wk=user).delete()
-
+                to_delete = PeisongProfile.objects.get(wk=user)
+                for i in PickOrder.objects.filter(pick_user=PeisongProfile.objects.get(wk=user)):
+                    PickOrderDetail.objects.filter(order_id=i.order_id).delete()
+                    i.delete()
+                to_delete.delete()
+                
         user.user_type = set_type
         user.save()
 
