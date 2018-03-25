@@ -46,13 +46,9 @@ def usercheck(user_type=-1):
         def inner_wrapper(*args, **kwargs):
             result = {}
             request = args[0]
-            if 'action' in request.GET:
-                action = request.GET['action']
-            elif 'action' in kwargs:
-                action = kwargs['action']
-            else:
-                action = 'None'
-            
+
+            action = request.GET.get('action',None) or kwargs.get('action', None) or 'None'
+
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
@@ -328,7 +324,7 @@ class UserManager(object):
         store = UserManager.get_user_store(user)
 
         profile['addr'] = store.store_addr
-        profile['phone'] = store.store_phone  
+        profile['phone'] = store.store_phone
         profile['name'] = store.store_name
 
         return profile
@@ -368,10 +364,11 @@ class UserManager(object):
             if user.user_type == 2:
                 to_delete = PeisongProfile.objects.get(wk=user)
                 for i in PickOrder.objects.filter(pick_user=PeisongProfile.objects.get(wk=user)):
-                    PickOrderDetail.objects.filter(order_id=i.order_id).delete()
+                    PickOrderDetail.objects.filter(
+                        order_id=i.order_id).delete()
                     i.delete()
                 to_delete.delete()
-                
+
         user.user_type = set_type
         user.save()
 
@@ -467,7 +464,7 @@ class StoreManager(object):
     def add_store(self):
         data = self.data
         store_id = StoreManager.gen_store_id()
-        
+
         try:
             area = DeliveryArea.objects.get(id=int(data['area']))
         except Exception as e:
@@ -491,7 +488,6 @@ class StoreManager(object):
             StoreGoods.objects.filter(store=to_delete).delete()
             order_pool = Order.objects.filter(store=to_delete)
 
-            
             # delete Store Order and Order detail
             for i in order_pool:
                 OrderDetail.objects.filter(order_id=i.order_id).delete()
@@ -523,9 +519,9 @@ class StoreManager(object):
             this_store.store_deposit = data['deposit']
             this_store.save()
 
-            new_info = {'id': this_store.store_id, 
+            new_info = {'id': this_store.store_id,
                         'name': this_store.store_name,
-                        'area': this_store.store_area.area_name, 
+                        'area': this_store.store_area.area_name,
                         'pay_type': this_store.store_pay_type,
                         'deposit': this_store.store_deposit}
 
@@ -725,7 +721,7 @@ class CustomerUserManager(object):
         return {'message': 'ok'}
 
     def reply(self):
-        store_id = int(self.data.get('store_id',0))
+        store_id = int(self.data.get('store_id', 0))
 
         try:
             store = Store.objects.get(store_id=store_id)
@@ -744,22 +740,23 @@ class GoodsManager(object):
         self.data = postdata
         self.action = action
 
-
     @staticmethod
     def sync_goods_stock(order):
         goods_pool = PickOrderDetail.objects.filter(order_id=order.order_id)
-        try:         
+        try:
             for i in goods_pool:
                 i.goods.goods_stock -= i.goods_count
 
                 try:
-                    car_goods = PeisongCarStock.objects.get(wk=order.pick_user,goods=i.goods)
+                    car_goods = PeisongCarStock.objects.get(
+                        wk=order.pick_user, goods=i.goods)
                     car_goods.goods_stock += i.goods_count
                     car_goods.save()
                 except:
-                    car_goods = PeisongCarStock(wk=order.pick_user,goods=i.goods,goods_stock=i.goods_count)
+                    car_goods = PeisongCarStock(
+                        wk=order.pick_user, goods=i.goods, goods_stock=i.goods_count)
                     car_goods.save()
-                
+
                 i.goods.save()
         except Exception as e:
             app.error(str(e))
@@ -933,14 +930,14 @@ class OrderManager(object):
         }
 
     @staticmethod
-    def set_order_status(order, order_type,pay_from = None):
+    def set_order_status(order, order_type, pay_from=None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
 
         # 向上级跳 Refuse
         if order_type != 3 and order.order_type <= order_type:
             return {'message': 'failed'}
-        
+
         # 大于取消时间 Refuse
         if order_type == 3:
             if datetime.now() - order.create_time > max_cancel_minutes:
@@ -959,10 +956,10 @@ class OrderManager(object):
             if pay_from is None:
                 return {'message': 'failed'}
 
-            if order.pay_type == 1 and pay_from !=2:
+            if order.pay_type == 1 and pay_from != 2:
                 return {'message': '月结订单支付方式只能是月结'}
 
-            order.pay_from = pay_from       
+            order.pay_from = pay_from
 
         order.order_type = order_type
         order.save()
@@ -982,7 +979,7 @@ class OrderManager(object):
                 'goods': order_goods}
 
     def cancel_order(self):
-        order_id = int(self.data.get('order_id',0))
+        order_id = int(self.data.get('order_id', 0))
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
@@ -1058,14 +1055,14 @@ class PeiSongManager(object):
         order_info['order_type'] = order.order_type
         order_info['confirm_time'] = str(order.confirm_time)
         order_info['is_modify'] = order.is_modify
-        
+
         for i in order.get_order_detail():
             goods_info.append({
                 'goods_id': i.goods.goods_id,
                 'goods_name': i.goods.goods_name,
                 'goods_spec': i.goods.goods_spec,
                 'goods_count': i.goods_count
-                }
+            }
             )
         return {'order_info': order_info,
                 'goods_info': goods_info}
@@ -1090,8 +1087,8 @@ class PeiSongManager(object):
         return result
 
     def set_receive_peisong(self):
-        order_id = int(self.data.get('order_id',0))
-        
+        order_id = int(self.data.get('order_id', 0))
+
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
@@ -1106,7 +1103,8 @@ class PeiSongManager(object):
     def get_pay_peisong(self):
         result = {}
         info = []
-        order_pool = Order.objects.filter(area=self.area, order_type=1, pay_type=0)
+        order_pool = Order.objects.filter(
+            area=self.area, order_type=1, pay_type=0)
 
         for i in order_pool:
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
@@ -1124,16 +1122,16 @@ class PeiSongManager(object):
         return result
 
     def set_pay_peisong(self):
-        order_id = int(self.data.get('order_id',0))
-        pay_from = int(self.data.get('pay_from',None))
+        order_id = int(self.data.get('order_id', 0))
+        pay_from = int(self.data.get('pay_from', None))
 
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
             return {'message': 'order_id failed'}
-        
+
         res = OrderManager.set_order_status(order, 0, pay_from=pay_from)
-        
+
         if res['message'] != 'ok':
             return res
 
@@ -1159,10 +1157,10 @@ class PeiSongManager(object):
         info = OrderDetail.objects.raw('select 1 as id,goods_id,sum(goods_count) as goods_count \
                                         from cms_orderdetail where cms_orderdetail.order_id in \
                                         (select order_id from cms_order where order_type={} and area_id={}) \
-                                        group by cms_orderdetail.goods_id'.format(2,self.area.id))
-
+                                        group by cms_orderdetail.goods_id'.format(2, self.area.id))
 
         for i in info:
+            print (i.goods_id.goods_name)
             goods_info = GoodsManager.get_goods_info(i.goods_id)
             result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
@@ -1170,7 +1168,7 @@ class PeiSongManager(object):
                            'goods_count': int(i.goods_count)})
 
         return {'message': 'ok',
-                'info':result}
+                'info': result}
 
     def new_pick(self):
         order_id = OrderManager.gen_order_id()
@@ -1181,7 +1179,7 @@ class PeiSongManager(object):
             for i in goods_list:
                 goods_id = i['goods_id']
                 goods_count = i['goods_count']
-                
+
                 try:
                     goods = Goods.objects.get(goods_id=goods_id)
                 except Exception as e:
@@ -1190,9 +1188,9 @@ class PeiSongManager(object):
 
                 pickorder_all_goods.append(
                     PickOrderDetail(
-                    order_id=order_id,
-                    goods=goods,
-                    goods_count=goods_count
+                        order_id=order_id,
+                        goods=goods,
+                        goods_count=goods_count
                     )
                 )
             try:
@@ -1207,7 +1205,7 @@ class PeiSongManager(object):
         if info['message'] != 'ok':
             return info
 
-        PickOrder(order_id=order_id,pick_user=pick_user).save()
+        PickOrder(order_id=order_id, pick_user=pick_user).save()
         info['order_id'] = order_id
 
         return info
@@ -1228,6 +1226,7 @@ class PeiSongManager(object):
 
 class KuGuanManager(object):
     """docstring for KuGuanManager"""
+
     def __init__(self, postdata, user):
         self.data = postdata
         self.user = user
@@ -1237,7 +1236,7 @@ class KuGuanManager(object):
         info = []
         for i in order_pool:
             t_info = PeiSongManager.get_pick_order_info(i)
-            t_info['user_info']  = {}
+            t_info['user_info'] = {}
             t_info['user_info']['user_name'] = i.pick_user.name
             t_info['user_info']['user_phone'] = i.pick_user.phone
             info.append(t_info)
@@ -1246,11 +1245,11 @@ class KuGuanManager(object):
                 'info': info}
 
     def confirm_pick(self):
-        order_id = int(self.data.get('order_id',0))
+        order_id = int(self.data.get('order_id', 0))
 
         try:
             order = PickOrder.objects.get(order_id=order_id)
-        except :
+        except:
             return {'message': 'order_id error'}
 
         # todo goods_list
@@ -1262,4 +1261,4 @@ class KuGuanManager(object):
             order.confirm_user = self.user
             order.save()
 
-        return info 
+        return info
