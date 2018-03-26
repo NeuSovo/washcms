@@ -12,7 +12,6 @@ from django.db.models import Q
 from django.conf import settings
 from django.shortcuts import HttpResponse
 
-
 from datetime import datetime, timedelta
 
 from cms.models import *
@@ -47,12 +46,12 @@ def usercheck(user_type=-1):
             result = {}
             request = args[0]
 
-            action = request.GET.get('action',None) or kwargs.get('action', None) or 'None'
+            action = request.GET.get('action', None) or kwargs.get('action', None) or 'None'
 
             try:
                 body = json.loads(request.body)
                 wckey = body['base_req']['wckey']
-            except Exception as e:
+            except:
                 result['code'] = ASEC.ERROR_PARAME
                 result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
                 response = parse_info(result)
@@ -230,7 +229,7 @@ class LoginManager(object):
 
         if not settings.DEBUG:
             user_info['qrcode'] = 'https://wash.wakefulness.cn/tools/qrcode/' + \
-                user_info['qrcode']
+                                  user_info['qrcode']
         user.save()
 
         return {'code': ASEC.LOGIN_SUCCESS,
@@ -838,7 +837,7 @@ class OrderManager(object):
     @staticmethod
     def gen_order_id():
         order_id = datetime.now().strftime("%Y%m%d%H%M%S") + \
-            str(random.randint(1000, 9999))
+                   str(random.randint(1000, 9999))
 
         return order_id
 
@@ -1160,7 +1159,7 @@ class PeiSongManager(object):
                                         group by cms_orderdetail.goods_id'.format(2, self.area.id))
 
         for i in info:
-            print (i.goods_id.goods_name)
+            print(i.goods_id.goods_name)
             goods_info = GoodsManager.get_goods_info(i.goods_id)
             result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
