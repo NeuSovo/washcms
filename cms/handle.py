@@ -922,6 +922,7 @@ class OrderManager(object):
         return {
             'order_id': str(order.order_id),
             'create_time': str(order.create_time),
+            'create_timestamp': time.mktime(order.create_time.timetuple()),
             'order_type': order.order_type,
             'pay_type': order.pay_type,
             'order_total_price': str(order.order_total_price),
