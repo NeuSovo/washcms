@@ -596,7 +596,10 @@ class StoreManager(object):
                 {'goods_id': i.goods.goods_id,
                  'goods_name': i.goods.goods_name,
                  'goods_spec': i.goods.goods_spec,
-                 'goods_price': float(i.goods_price)})
+                 'goods_price': float(i.goods_price),
+                 'goods_stock': i.goods.goods_stock,
+                 'goods_store_stock':i.goods_stock,
+                 'is_recover': i.goods.is_recover})
 
         return result
 
@@ -1020,6 +1023,10 @@ class PeiSongManager(object):
         self.area = UserManager.get_user_area(user)
 
     @staticmethod
+    def set_pick_order_status(order, status):
+        pass
+
+    @staticmethod
     def get_peisong_order_info(order):
         peisong_detail = {}
         store_info = StoreManager.get_store_info(store=order.store)
@@ -1261,3 +1268,25 @@ class KuGuanManager(object):
             order.save()
 
         return info
+
+    def modify_pick(self):
+        order_id = int(self.data.get('order_id',0))
+
+        try:
+            order = PickOrder.objects.get(order_id=order_id)   
+        except:
+            return {'message': 'order_id error'}
+
+        goods_list = self.data['goods_list']
+
+        for i in goods_list:
+            try:
+                o = PickOrderDetail.objects.get(order_id=order_id,goods_id=i['goods_id'])
+            except Exception as e:
+                return {'message': 'goods_id({}) not exist'.format(i['goods_id'])}
+            o.goods_count = i['goods_count']
+            o.save()
+
+        order.is_modify = 1
+        order.save()
+        return dict({'message': 'ok'}, **(PeiSongManager.get_pick_order_info(order)))

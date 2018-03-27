@@ -195,13 +195,6 @@ def get_user_goods_view(request, user):
     result['message'] = 'ok'
     goods_list = StoreManager.get_store_price(user_store)
 
-    for i, item in enumerate(goods_list):
-        goods_info = GoodsManager.get_goods_info(item['goods_id'])
-        goods_stock = goods_info['goods_stock']
-        is_recover = goods_info['is_recover']
-        goods_list[i]['goods_stock'] = goods_stock
-        goods_list[i]['is_revoer'] = is_recover  # TODO
-
     result['goods_list'] = goods_list
     response = parse_info(result)
 

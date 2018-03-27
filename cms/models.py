@@ -378,6 +378,7 @@ class PickOrder(models.Model):
         (1, '被修改')
         )
     order_type_level = (
+        (-1, '取消'),
         (0, '已确认'),
         (1, '未确认')
         )
