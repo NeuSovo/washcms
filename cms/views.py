@@ -276,6 +276,7 @@ def staff_profile_view(request, action, user):
 
     return response
 
+
 @usercheck(user_type=2)
 def staff_goods_view(request, action, user):
     result = {}
@@ -283,7 +284,7 @@ def staff_goods_view(request, action, user):
     body = json.loads(request.body)
 
     if action == 'all':
-        result =  GoodsManager.all_goods()
+        result = GoodsManager.all_goods()
 
     response = parse_info(result)
 
@@ -296,7 +297,7 @@ def staff_peisong_order_view(request, status, action, user):
 
     body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
-    
+
     # get_receive_peisong
     # set_receive_peisong
     # get_pay_peisong
@@ -314,7 +315,7 @@ def staff_peisong_order_view(request, status, action, user):
 
 
 @usercheck(user_type=2)
-def staff_peisong_stock_view(request,action,user):
+def staff_peisong_stock_view(request, action, user):
     result = {}
 
     body = json.loads(request.body)

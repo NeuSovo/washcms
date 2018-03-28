@@ -46,7 +46,8 @@ def usercheck(user_type=-1):
             result = {}
             request = args[0]
 
-            action = request.GET.get('action', None) or kwargs.get('action', None) or 'None'
+            action = request.GET.get('action', None) or kwargs.get(
+                'action', None) or 'None'
 
             try:
                 body = json.loads(request.body)
@@ -598,7 +599,7 @@ class StoreManager(object):
                  'goods_spec': i.goods.goods_spec,
                  'goods_price': float(i.goods_price),
                  'goods_stock': i.goods.goods_stock,
-                 'goods_store_stock':i.goods_stock,
+                 'goods_store_stock': i.goods_stock,
                  'is_recover': i.goods.is_recover})
 
         return result
@@ -840,7 +841,7 @@ class OrderManager(object):
     @staticmethod
     def gen_order_id():
         order_id = datetime.now().strftime("%Y%m%d%H%M%S") + \
-                   str(random.randint(1000, 9999))
+            str(random.randint(1000, 9999))
 
         return order_id
 
@@ -1271,10 +1272,10 @@ class KuGuanManager(object):
         return info
 
     def modify_pick(self):
-        order_id = int(self.data.get('order_id',0))
+        order_id = int(self.data.get('order_id', 0))
 
         try:
-            order = PickOrder.objects.get(order_id=order_id)   
+            order = PickOrder.objects.get(order_id=order_id)
         except:
             return {'message': 'order_id error'}
 
@@ -1282,7 +1283,8 @@ class KuGuanManager(object):
 
         for i in goods_list:
             try:
-                o = PickOrderDetail.objects.get(order_id=order_id,goods_id=i['goods_id'])
+                o = PickOrderDetail.objects.get(
+                    order_id=order_id, goods_id=i['goods_id'])
             except Exception as e:
                 return {'message': 'goods_id({}) not exist'.format(i['goods_id'])}
             o.goods_count = i['goods_count']
