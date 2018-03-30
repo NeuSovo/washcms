@@ -652,7 +652,7 @@ class EmployeeManager(object):
         if set_type < 0:
             return {'message': 'failed'}
 
-        if self.data['set_type'] == 2:
+        if set_type == 2:
             area_id = int(self.data.get('area_id', 0))
             try:
                 area = DeliveryArea.objects.get(id=area_id)
@@ -696,7 +696,7 @@ class EmployeeManager(object):
             return method()
         except Exception as e:
             app.info(str(e))
-            return EmployeeManager.all_employee()
+            raise e
 
 
 class CustomerUserManager(object):
@@ -940,12 +940,12 @@ class OrderManager(object):
 
         # 向上级跳 Refuse
         if order_type != 3 and order.order_type <= order_type:
-            return {'message': 'failed'}
+            return {'message': 'Refuse'}
 
         # 大于取消时间 Refuse
         if order_type == 3:
             if datetime.now() - order.create_time > max_cancel_minutes:
-                return {'message': 'failed'}
+                return {'message': '大于取消时间'}
 
         # 待支付
         if order_type == 1:
@@ -953,7 +953,7 @@ class OrderManager(object):
             try:
                 StoreManager.sync_store_stock(order)
             except Exception as e:
-                return {'message': 'failed'}
+                return {'message': str(e)}
 
         if order_type == 0:
             order.done_time = datetime.now()
