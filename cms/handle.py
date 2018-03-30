@@ -1167,7 +1167,7 @@ class PeiSongManager(object):
                                         group by cms_orderdetail.goods_id'.format(2, self.area.id))
 
         for i in info:
-            print(i.goods_id.goods_name)
+           # print(i.goods_id.goods_name)
             goods_info = GoodsManager.get_goods_info(i.goods_id)
             result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
