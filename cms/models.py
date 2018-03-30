@@ -311,6 +311,12 @@ class Order(models.Model):
                     DeliveryArea,
                     on_delete=models.CASCADE
                 )
+    ps_user = models.ForeignKey(
+                    PeisongProfile,
+                    on_delete=models.CASCADE,
+                    null=True,
+                    blank=True
+                )
     order_type = models.IntegerField(
                 choices=order_type_level,
                 default=2

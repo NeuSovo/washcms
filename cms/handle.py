@@ -277,7 +277,7 @@ class UserManager(object):
         :param user:
         :return: Customer User store id
         """
-        return CustomerProfile.objects.get(wk=user).store
+        return CustomerProfile.objects.get(wk=user)
 
     @staticmethod
     def get_user_area(user):
@@ -286,7 +286,7 @@ class UserManager(object):
         :param user:
         :return: Courier User Area id
         """
-        return PeisongProfile.objects.get(wk=user).area
+        return PeisongProfile.objects.get(wk=user)
 
     @staticmethod
     def set_user_profile(user, profile):
@@ -306,7 +306,7 @@ class UserManager(object):
         """
         only user type is 3
         """
-        store = UserManager.get_user_store(user)
+        store = UserManager.get_user_store(user).store
 
         store.store_addr = profile['addr']
         store.store_phone = int(profile['phone'])
@@ -321,7 +321,7 @@ class UserManager(object):
         only user type is 3
         """
         profile = {}
-        store = UserManager.get_user_store(user)
+        store = UserManager.get_user_store(user).store
 
         profile['addr'] = store.store_addr
         profile['phone'] = store.store_phone
@@ -467,8 +467,8 @@ class StoreManager(object):
 
         try:
             area = DeliveryArea.objects.get(id=int(data['area']))
-        except Exception as e:
-            return {'message': 'failed'}
+        except Exception:
+            return {'message': 'area_id not exists'}
 
         new_store = Store(store_id=store_id,
                           store_name=data['name'],
@@ -616,17 +616,35 @@ class StoreManager(object):
                 'pay_type': store.store_pay_type}
 
     @staticmethod
-    def sync_store_stock(order):
+    def sync_store_stock(order, ps_user=None):
         # TODO
         # Sync Car Stock
         goods_pool = OrderDetail.objects.filter(order_id=order.order_id)
 
-        for i in goods_pool:
-            store_goods = StoreGoods.objects.get(
-                store=order.store, goods=i.goods)
-            car_goods = PeisongCarStock.objects.get()
-            store_goods.goods_stock += i.goods_count
-            store_goods.save()
+        try:
+            for i in goods_pool:
+                store_goods = StoreGoods.objects.get(
+                    store=order.store, goods=i.goods)
+
+                try:
+                    car_goods = PeisongCarStock.objects.get(
+                        wk=ps_user, goods=i.goods)
+                    
+                    # 看实际情况再决定加不加
+                    # if car_goods.goods_stock < i.goods_count:
+                    #     return {'message': '库存不足'}
+
+                    car_goods.goods_stock -= i.goods_count
+                    car_goods.save()
+                except Exception:
+                    return {'message': '车上没有此商品,你是咋送的'}
+
+                store_goods.goods_stock += i.goods_count
+                store_goods.save()
+
+        except Exception as e:
+            app.error(str(e))
+            return {'message': (str(e))}
 
         return {'message': 'ok'}
 
@@ -848,7 +866,7 @@ class OrderManager(object):
     def save_order(self):
         user = self.user
         order_id = OrderManager.gen_order_id()
-        store = UserManager.get_user_store(user)
+        store = UserManager.get_user_store(user).store
         area = store.store_area
         remarks = self.data['remarks']
 
@@ -869,7 +887,8 @@ class OrderManager(object):
                     goods=goods,
                     store=store
                 )
-                goods_price = this_goods.goods_price * goods.goods_spec
+                # delect goods_spec 2018/03/30
+                goods_price = this_goods.goods_price
 
                 total_price = goods_price * int(goods_count)
                 order_price += total_price
@@ -934,7 +953,7 @@ class OrderManager(object):
         }
 
     @staticmethod
-    def set_order_status(order, order_type, pay_from=None):
+    def set_order_status(order, order_type, pay_from=None, ps_user=None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
 
@@ -951,7 +970,8 @@ class OrderManager(object):
         if order_type == 1:
             order.receive_time = datetime.now()
             try:
-                StoreManager.sync_store_stock(order)
+                StoreManager.sync_store_stock(order, ps_user=ps_user)
+                order.ps_user = ps_user
             except Exception as e:
                 return {'message': str(e)}
 
@@ -993,7 +1013,7 @@ class OrderManager(object):
 
     def status_order(self):
         status = int(self.data['status'])
-        store = UserManager.get_user_store(user=self.user)
+        store = UserManager.get_user_store(user=self.user).store
         status_order = []
 
         if status > 3:
@@ -1022,7 +1042,8 @@ class PeiSongManager(object):
     def __init__(self, user, postdata):
         self.user = user
         self.data = postdata
-        self.area = UserManager.get_user_area(user)
+        self.ps_user = UserManager.get_user_area(user)
+        self.area = self.ps_user.area
 
     @staticmethod
     def set_pick_order_status(order, status):
@@ -1102,7 +1123,7 @@ class PeiSongManager(object):
         except Exception as e:
             return {'message': 'order_id failed'}
 
-        res = OrderManager.set_order_status(order, 1)
+        res = OrderManager.set_order_status(order, 1, ps_user=self.ps_user)
         if res['message'] != 'ok':
             return res
 

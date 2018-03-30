@@ -191,7 +191,7 @@ def get_user_goods_view(request, user):
 
     body = json.loads(request.body)
 
-    user_store = UserManager.get_user_store(user)
+    user_store = UserManager.get_user_store(user).store
     result['message'] = 'ok'
     goods_list = StoreManager.get_store_price(user_store)
 
@@ -217,7 +217,7 @@ def order_view(request, user):
 def change_profile_view(request, user):
     result = {}
     body = json.loads(request.body)
-    user_store = UserManager.get_user_store(user)
+    user_store = UserManager.get_user_store(user).store
 
     action = request.GET.get('action', 'get')
 
