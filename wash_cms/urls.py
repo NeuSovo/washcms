@@ -41,6 +41,7 @@ urlpatterns = [
 
     path('user/order/<str:action>', order_2_view),
     path('user/order/<str:action>/<int:status>', order_2_view),
+    path('user/recover/<str:action>', recover_view),
 
     path('staff/goods/<str:action>', staff_goods_view), # get,
     path('staff/kuguan/pick/<str:action>', staff_kuguan_pick_view), # get confirm
@@ -50,7 +51,7 @@ urlpatterns = [
     path('staff/peisong/order/<str:status>/<str:action>', staff_peisong_order_view), # ,receive,pay,get,set
     path('staff/peisong/stock/<str:action>', staff_peisong_stock_view),       # car,ps
     path('staff/peisong/pick/<str:action>', staff_peisong_pick_view), # new,get
-    
+
     path('test',test_test_view)
 
 ]

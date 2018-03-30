@@ -7,7 +7,7 @@ from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
                         usercheck, EmployeeManager, CustomerUserManager, GoodsManager,
-                        OrderManager, PeiSongManager, KuGuanManager)
+                        OrderManager, PeiSongManager, KuGuanManager, RecoverManager)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -251,6 +251,24 @@ def order_2_view(request, user, action=None, status=None):
 
     result = OrderManager(action=action, postdata=body, user=user)
     response = parse_info(result.reply())
+
+    return response
+
+
+@usercheck(user_type=3)
+def recover_view(request, user ,action=None):
+    body = json.loads(request.body)
+    recover = RecoverManager(user=user, **body)
+
+    try:
+        method_name = action + '_recover_order'
+        result = getattr(recover, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
 
     return response
 

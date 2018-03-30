@@ -65,7 +65,6 @@ class User(models.Model):
         return '%s : %s' % (self.nick_name, self.type_level[self.user_type])
 
 
-
 class DeliveryArea(models.Model):
 
     class Meta:
@@ -207,6 +206,10 @@ class Goods(models.Model):
 
 
 class PeisongCarStock(models.Model):
+    goods_type_choice = (
+        (0, '新货'),
+        (1, '旧货')
+        )
 
     class Meta:
         verbose_name = "配送员车上货物"
@@ -222,6 +225,10 @@ class PeisongCarStock(models.Model):
         )
     goods_stock = models.IntegerField(
             default=0
+        )
+    goods_type = models.IntegerField(
+            default=0,
+            choices=goods_type_choice 
         )
 
 
@@ -287,11 +294,6 @@ class Order(models.Model):
         (2, '月结'),
         (3, '未支付')
     )
-
-    store_level = []
-    area_level = []
-    # for i in Store.store_all():
-    #     store_level.append([i.store_id,i.store_name])
 
     order_id = models.BigIntegerField(
                     primary_key=True
@@ -431,6 +433,67 @@ class PickOrderDetail(models.Model):
             Goods,
             on_delete=models.CASCADE 
         )
+    goods_count = models.IntegerField()
+
+
+class RecoverOrder(models.Model):
+    order_type_level = (
+        (0, '已完成'),
+        (1, '待取货'),
+        )
+    class Meta:
+        verbose_name = "RecoverOrder"
+        verbose_name_plural = "RecoverOrders"
+
+    order_id = models.BigIntegerField(
+                    primary_key=True
+                )
+    create_time = models.DateTimeField(
+                    auto_now_add=True
+                )
+    store = models.ForeignKey(
+                    Store,
+                    on_delete=models.CASCADE
+                )
+    user = models.ForeignKey(
+                    CustomerProfile,
+                    on_delete=models.CASCADE
+                )
+    area = models.ForeignKey(
+                    DeliveryArea,
+                    on_delete=models.CASCADE
+                )
+    ps_user = models.ForeignKey(
+                    PeisongProfile,
+                    on_delete=models.CASCADE,
+                    null=True
+                )
+    order_type = models.IntegerField(
+                choices=order_type_level,
+                default=1
+                )
+    receive_time = models.DateTimeField(
+                null=True,
+                blank=True
+                )
+
+    def get_order_detail(self):
+        return RecoverModelDetail.objects.filter(order_id=self.order_id)    
+ 
+class RecoverModelDetail(models.Model):
+
+    class Meta:
+        verbose_name = "RecoverModelDetail"
+        verbose_name_plural = "RecoverModelDetails"
+    
+    order_id = models.BigIntegerField(
+                    null=True
+                )
+    goods = models.ForeignKey(
+            Goods,
+            on_delete=models.CASCADE 
+        )
+
     goods_count = models.IntegerField()
 
 

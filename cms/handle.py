@@ -483,6 +483,9 @@ class StoreManager(object):
         return {'message': 'ok', 'id': new_store.store_id}
 
     def del_store(self):
+        # TODO
+        # 删除动作加入消息队列
+        # 减少用户访问时间
         try:
             to_delete = Store.objects.get(store_id=int(self.data['id']))
             StoreGoods.objects.filter(store=to_delete).delete()
@@ -616,10 +619,14 @@ class StoreManager(object):
                 'pay_type': store.store_pay_type}
 
     @staticmethod
-    def sync_store_stock(order, ps_user=None):
+    def sync_store_stock(order, ps_user=None, new=True):
         # TODO
+        # if new : 新货 car[-],store[+]
         # Sync Car Stock
-        goods_pool = OrderDetail.objects.filter(order_id=order.order_id)
+        if new:
+            goods_pool = OrderDetail.objects.filter(order_id=order.order_id)
+        else:
+            goods_pool = RecoverModelDetail.objects.filter(order_id=order_id)
 
         try:
             for i in goods_pool:
@@ -633,18 +640,21 @@ class StoreManager(object):
                     # 看实际情况再决定加不加
                     # if car_goods.goods_stock < i.goods_count:
                     #     return {'message': '库存不足'}
+                    goods_count = i.goods_count
+                    if not new:
+                        goods_count = -(i.goods_count)
 
-                    car_goods.goods_stock -= i.goods_count
+                    car_goods.goods_stock -= goods_count
                     car_goods.save()
-                except Exception:
-                    return {'message': '车上没有此商品,你是咋送的'}
+                except Exception as e:
+                    raise e
 
-                store_goods.goods_stock += i.goods_count
+                store_goods.goods_stock += goods_count
                 store_goods.save()
 
         except Exception as e:
             app.error(str(e))
-            return {'message': (str(e))}
+            raise e
 
         return {'message': 'ok'}
 
@@ -1046,10 +1056,6 @@ class PeiSongManager(object):
         self.area = self.ps_user.area
 
     @staticmethod
-    def set_pick_order_status(order, status):
-        pass
-
-    @staticmethod
     def get_peisong_order_info(order):
         peisong_detail = {}
         store_info = StoreManager.get_store_info(store=order.store)
@@ -1103,13 +1109,18 @@ class PeiSongManager(object):
         """
         result = {}
         info = []
+        recover_info = []
+
         order_pool = Order.objects.filter(area=self.area, order_type=2)
+        recover_order_pool = RecoverOrder.objects.filter(area=self.area, order_type=1)
 
         for i in order_pool:
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
 
             info.append(peisong_detail)
 
+        for i in recover_order_pool:
+            pass
         result['message'] = 'ok'
         result['info'] = info
 
@@ -1128,6 +1139,27 @@ class PeiSongManager(object):
             return res
 
         return {'message': 'ok'}
+
+    def receive_recover_peisong(self):
+        order_id = int(self.data.get('order_id', 0))
+
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
+
+        res = StoreManager.sync_store_stock(order=order,ps_user=ps_user,new=False)
+
+        if res['message'] != 'ok':
+            return res
+
+        order.ps_user = self.ps_user
+        order.order_type = 0
+        order.receive_time = datetime.now()
+        order.save()
+
+        return {'message': 'ok'}
+
 
     def get_pay_peisong(self):
         result = {}
@@ -1282,6 +1314,8 @@ class KuGuanManager(object):
             return {'message': 'order_id error'}
 
         # todo goods_list
+        if order.order_type == 0:
+            return {'message': 'failed'}
 
         info = GoodsManager.sync_goods_stock(order)
         if info['message'] == 'ok':
@@ -1314,3 +1348,62 @@ class KuGuanManager(object):
         order.is_modify = 1
         order.save()
         return dict({'message': 'ok'}, **(PeiSongManager.get_pick_order_info(order)))
+
+
+class RecoverManager(object):
+    """docstring for RecoverManager"""
+    def __init__(self, user, **kwargs):
+        self.user = user
+        self.store = UserManager.get_user_store(self.user).store
+        self.goods_list = kwargs['goods_list']
+
+    def new_recover_order(self):
+        order_id = OrderManager.gen_order_id()
+
+        def save_recover_detail(order_id, goods_list):
+            recover_all_goods = []
+            for i in goods_list:
+                goods_id = i['goods_id']
+                goods_count = i['goods_count']
+
+                try:
+                    goods = Goods.objects.get(goods_id=goods_id)
+                except Exception as e:
+                    app.info(str(e))
+                    return {'message': 'goods_id does not exist'}
+
+                recover_all_goods.append(
+                    RecoverModelDetail(
+                        order_id=order_id,
+                        goods=goods,
+                        goods_count=goods_count
+                    )
+                )
+            try:
+                RecoverModelDetail.objects.bulk_create(recover_all_goods)
+            except Exception as e:
+                app.error(str(e))
+                return {'message': 'failed'}
+
+            return {'message': 'ok'}
+
+        info = save_recover_detail(order_id, self.goods_list)
+        if info['message'] != 'ok':
+            return info
+
+        RecoverOrder(order_id=order_id, store=self.store, user=self.user, area=self.store.area).save()
+        info['order_id'] = order_id
+
+        return info
+
+    @staticmethod
+    def get_recover_order_info(order):
+        pass
+
+    def cancel_recover_order(self):
+        pass
+
+    def status_recover_order(self):
+        pass
+#
+
