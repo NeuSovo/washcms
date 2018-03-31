@@ -7,12 +7,11 @@ import random
 import logging
 import requests
 from hashlib import sha256, md5
+from datetime import datetime, timedelta
 
 from django.db.models import Q
 from django.conf import settings
 from django.shortcuts import HttpResponse
-
-from datetime import datetime, timedelta
 
 from cms.models import *
 from cms.apps import APIServerErrorCode as ASEC
@@ -31,14 +30,7 @@ def parse_info(data):
     """
     return HttpResponse(json.dumps(data, indent=4),
                         content_type="application/json")
-
-
-def get_user(wckey):
-    user_key = Session.objects.get(session_data=wckey)
-    user = User.objects.get(wk=user_key.session_key)
-
-    return user
-
+    
 
 def usercheck(user_type=-1):
     def wrapper(func):
@@ -620,34 +612,44 @@ class StoreManager(object):
 
     @staticmethod
     def sync_store_stock(order, ps_user=None, new=True):
+
         # TODO
         # if new : 新货 car[-],store[+]
         # Sync Car Stock
+        # 消息队列
+
+        goods_type = 0
         if new:
             goods_pool = OrderDetail.objects.filter(order_id=order.order_id)
         else:
-            goods_pool = RecoverModelDetail.objects.filter(order_id=order_id)
+            goods_pool = RecoverModelDetail.objects.filter(
+                order_id=order.order_id)
+            goods_type = 1
 
         try:
             for i in goods_pool:
                 store_goods = StoreGoods.objects.get(
-                    store=order.store, goods=i.goods)
+                    store=order.store, goods=i.goods,)
 
                 try:
                     car_goods = PeisongCarStock.objects.get(
-                        wk=ps_user, goods=i.goods)
-                    
+                        wk=ps_user, goods=i.goods, goods_type=goods_type)
+                except Exception as e:
+                    if new:
+                        raise e
+                    else:
+                        car_goods = PeisongCarStock(
+                            wk=ps_user, goods=i.goods, goods_type=goods_type)
+
                     # 看实际情况再决定加不加
                     # if car_goods.goods_stock < i.goods_count:
                     #     return {'message': '库存不足'}
-                    goods_count = i.goods_count
-                    if not new:
-                        goods_count = -(i.goods_count)
+                goods_count = i.goods_count
+                if not new:
+                    goods_count = -(i.goods_count)
 
-                    car_goods.goods_stock -= goods_count
-                    car_goods.save()
-                except Exception as e:
-                    raise e
+                car_goods.goods_stock -= goods_count
+                car_goods.save()
 
                 store_goods.goods_stock += goods_count
                 store_goods.save()
@@ -1109,18 +1111,14 @@ class PeiSongManager(object):
         """
         result = {}
         info = []
-        recover_info = []
 
         order_pool = Order.objects.filter(area=self.area, order_type=2)
-        recover_order_pool = RecoverOrder.objects.filter(area=self.area, order_type=1)
 
         for i in order_pool:
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
 
             info.append(peisong_detail)
 
-        for i in recover_order_pool:
-            pass
         result['message'] = 'ok'
         result['info'] = info
 
@@ -1140,15 +1138,33 @@ class PeiSongManager(object):
 
         return {'message': 'ok'}
 
-    def receive_recover_peisong(self):
-        order_id = int(self.data.get('order_id', 0))
+    def get_recover_peisong(self):
+        info = []
+        recover_order_pool = RecoverOrder.objects.filter(
+            area=self.area, order_type=1)
 
+        for i in recover_order_pool:
+            info.append(RecoverManager.get_recover_order_info(i))
+
+        return {'message': 'ok',
+                'info': info}
+
+    def set_recover_peisong(self):
         try:
-            order = Order.objects.get(order_id=order_id)
-        except Exception as e:
+            order_id = int(self.data['order_id'])
+        except Exception:
             return {'message': 'order_id failed'}
 
-        res = StoreManager.sync_store_stock(order=order,ps_user=ps_user,new=False)
+        try:
+            order = RecoverOrder.objects.get(order_id=order_id)
+        except Exception:
+            return {'message': 'order_id not exists'}
+
+        if order.order_type == 0:
+            return {'message': 'ok'}
+
+        res = StoreManager.sync_store_stock(
+            order=order, ps_user=self.ps_user, new=False)
 
         if res['message'] != 'ok':
             return res
@@ -1159,7 +1175,6 @@ class PeiSongManager(object):
         order.save()
 
         return {'message': 'ok'}
-
 
     def get_pay_peisong(self):
         result = {}
@@ -1200,15 +1215,27 @@ class PeiSongManager(object):
 
     def get_car_stock(self):
         result = []
-        pick_user = PeisongProfile.objects.get(wk=self.user)
-        goods_pool = PeisongCarStock.objects.filter(wk=pick_user)
+        old_info = []
+        goods_pool = PeisongCarStock.objects.filter(wk=self.ps_user)
         for i in goods_pool:
-            result.append({'goods_id': i.goods.goods_id,
-                           'goods_name': i.goods.goods_name,
-                           'goods_spec': i.goods.goods_spec,
-                           'goods_stock': int(i.goods_stock)})
+            if i.goods_type == 0:
+                if i.goods_stock == 0:
+                    continue
+                result.append({'goods_id': i.goods.goods_id,
+                               'goods_name': i.goods.goods_name,
+                               'goods_spec': i.goods.goods_spec,
+                               'goods_stock': int(i.goods_stock)})
+            else:
+                if i.goods_stock == 0:
+                    continue
+                old_info.append({'goods_id': i.goods.goods_id,
+                                 'goods_name': i.goods.goods_name,
+                                 'goods_spec': i.goods.goods_spec,
+                                 'goods_stock': int(i.goods_stock)})
+
         return {'message': 'ok',
-                'info': result}
+                'info': result,
+                'old_info': old_info}
 
     def get_ps_stock(self):
         # pass
@@ -1352,9 +1379,10 @@ class KuGuanManager(object):
 
 class RecoverManager(object):
     """docstring for RecoverManager"""
+
     def __init__(self, user, **kwargs):
         self.user = user
-        self.store = UserManager.get_user_store(self.user).store
+        self.store_user = UserManager.get_user_store(self.user)
         self.goods_list = kwargs['goods_list']
 
     def new_recover_order(self):
@@ -1391,14 +1419,31 @@ class RecoverManager(object):
         if info['message'] != 'ok':
             return info
 
-        RecoverOrder(order_id=order_id, store=self.store, user=self.user, area=self.store.area).save()
+        RecoverOrder(order_id=order_id, store=self.store_user.store,
+                     user=self.store_user, area=self.store_user.store.store_area).save()
         info['order_id'] = order_id
 
         return info
 
     @staticmethod
     def get_recover_order_info(order):
-        pass
+        goods_info = []
+        order_info = {}
+        goods_pool_info = order.get_order_detail()
+        for i in goods_pool_info:
+            goods_info.append({'goods_id': i.goods.goods_id,
+                               'goods_name': i.goods.goods_name,
+                               'goods_spec': i.goods.goods_spec,
+                               'goods_count': i.goods_count})
+
+        order_info['order_id'] = str(order.order_id)
+        order_info['create_time'] = str(order.create_time)
+        order_info['store_name'] = order.store.store_name
+        order_info['store_phone'] = order.store.store_phone
+        order_info['store_addr'] = order.store.store_addr
+
+        return {'order_info': order_info,
+                'goods_lnfo': goods_info}
 
     def cancel_recover_order(self):
         pass
@@ -1406,4 +1451,3 @@ class RecoverManager(object):
     def status_recover_order(self):
         pass
 #
-
