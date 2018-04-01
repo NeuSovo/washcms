@@ -33,6 +33,7 @@ urlpatterns = [
     path('boss/store', change_store_view),
     path('boss/employee', change_employee_view),
     path('boss/goods', change_goods_view),
+    # path('boss/report/<str:action>'),# order/store/
 
     path('user/bind', bind_user_view),
     path('user/order', order_view),

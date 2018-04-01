@@ -440,6 +440,7 @@ class RecoverOrder(models.Model):
     order_type_level = (
         (0, '已完成'),
         (1, '待取货'),
+        (2, '已取消')
         )
     class Meta:
         verbose_name = "RecoverOrder"

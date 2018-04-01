@@ -54,7 +54,7 @@ def usercheck(user_type=-1):
 
             try:
                 user_key = Session.objects.get(session_data=wckey)
-            except Exception as e:
+            except Exception:
                 result['code'] = ASEC.SESSION_NOT_WORK
                 result['message'] = ASEC.getMessage(ASEC.SESSION_NOT_WORK)
 
@@ -372,15 +372,6 @@ class AreaManager(object):
         self.action = action
         self.data = postdata
 
-    @staticmethod
-    def check_area_id_exist(area_id):
-        try:
-            DeliveryArea.objects.get(id=area_id)
-            return True
-        except Exception as e:
-            app.error(str(e))
-            return False
-
     def add_area(self):
         new_area = DeliveryArea(area_name=self.data['name'])
         new_area.save()
@@ -404,7 +395,7 @@ class AreaManager(object):
         return {'message': 'ok'}
 
     def change_area(self):
-        area = DeliveryArea.objects.get(id=self.data['id'])
+        area = DeliveryArea.objects.get(id=int(self.data['id']))
         area.area_name = self.data['name']
         area.save()
         return {'message': 'ok', 'new_name': area.area_name}
@@ -443,7 +434,7 @@ class StoreManager(object):
         try:
             Store.objects.get(store_id=store_id)
             return True
-        except:
+        except Exception:
             return False
 
     @staticmethod
@@ -523,7 +514,7 @@ class StoreManager(object):
             return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
             app.error(str(e) + '{}'.format(data))
-            return {'message': 'failed'}
+            return {'message': str(e)}
 
     def getprice_store(self):
         try:
@@ -545,7 +536,7 @@ class StoreManager(object):
             store = Store.objects.get(store_id=store_id)
             store_goods = StoreGoods.objects.filter(store=store)
         except Exception as e:
-            return {'message': str(e)}
+            return {'message': 'store_id is not exists'}
 
         store_goods_list = [i.goods_id for i in store_goods]
 
@@ -665,7 +656,7 @@ class StoreManager(object):
         try:
             method = getattr(self, method_name)
             return method()
-        except Exception as e:
+        except AttributeError as e:
             app.info(str(e))
             return StoreManager.all_store()
 
@@ -742,7 +733,7 @@ class CustomerUserManager(object):
         """
         user = self.user
 
-        if user.user_type < 3:
+        if user.user_type <= 3:
             return {'message': 'failed'}
 
         new_customer = CustomerProfile(wk=user, store=store)
@@ -758,8 +749,7 @@ class CustomerUserManager(object):
 
         try:
             store = Store.objects.get(store_id=store_id)
-        except Exception as e:
-            app.info(str(e))
+        except Exception:
             return {"message": 'store_id not exist'}
 
         return self.bind(store)
@@ -1383,7 +1373,8 @@ class RecoverManager(object):
     def __init__(self, user, **kwargs):
         self.user = user
         self.store_user = UserManager.get_user_store(self.user)
-        self.goods_list = kwargs['goods_list']
+        self.goods_list = kwargs.get('goods_list',None)
+        self.order_id = int(kwargs.get('order_id',0))
 
     def new_recover_order(self):
         order_id = OrderManager.gen_order_id()
@@ -1446,8 +1437,32 @@ class RecoverManager(object):
                 'goods_lnfo': goods_info}
 
     def cancel_recover_order(self):
-        pass
+        order_id = self.order_id
+
+        try:
+            order = RecoverOrder.objects.get(order_id=order_id)
+        except:
+            return {'message': 'order_id error'}
+
+        if order.order_type == 0:
+            return {'message': 'failed'}
+
+        max_cancel_minutes = timedelta(minutes=30)
+        if datetime.now() - order.create_time > max_cancel_minutes:
+            return {'message': '大于取消时间'}
+        else:
+            order.order_type = 2
+            order.save()
+            return {'message': 'ok'}
+
 
     def status_recover_order(self):
-        pass
+        try:
+            order_pool = RecoverOrder.objects.filter(store=self.store_user.store,order_type=1)
+        except:
+            return {'message': 'order_id error'}
+
+        info = [RecoverManager.get_recover_order_info(i) for i in order_pool]
+        return {'message': 'ok',
+                'info': info }
 #
