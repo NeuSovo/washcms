@@ -104,7 +104,12 @@ def login_view(request, user):
     :param user:
     :return: user_type,user_info
     """
-
+    if 'HTTP_X_FORWARDED_FOR' in request.META:  
+        ip =  request.META['HTTP_X_FORWARDED_FOR']
+        print ('ip:',ip) 
+    else:  
+        ip = request.META['REMOTE_ADDR']
+        print (ip) 
     result = {}
     body = json.loads(request.body)
     login = LoginManager(user=user)
