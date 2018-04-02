@@ -627,14 +627,13 @@ class StoreManager(object):
                         wk=ps_user, goods=i.goods, goods_type=goods_type)
                 except Exception as e:
                     if new:
-                        raise e
+                    # 看实际情况再决定加不加
+                        return {'message': '车上没有此物品!'}
+                        # raise e
                     else:
                         car_goods = PeisongCarStock(
                             wk=ps_user, goods=i.goods, goods_type=goods_type)
 
-                    # 看实际情况再决定加不加
-                    # if car_goods.goods_stock < i.goods_count:
-                    #     return {'message': '库存不足'}
                 goods_count = i.goods_count
                 if not new:
                     goods_count = -(i.goods_count)
@@ -1429,6 +1428,7 @@ class RecoverManager(object):
 
         order_info['order_id'] = str(order.order_id)
         order_info['create_time'] = str(order.create_time)
+        order_info['create_timestamp'] = time.mktime(order.create_time.timetuple()),
         order_info['store_name'] = order.store.store_name
         order_info['store_phone'] = order.store.store_phone
         order_info['store_addr'] = order.store.store_addr
