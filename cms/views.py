@@ -198,7 +198,7 @@ def get_user_goods_view(request, user):
 
     user_store = UserManager.get_user_store(user).store
     result['message'] = 'ok'
-    goods_list = StoreManager.get_store_price(user_store)
+    goods_list = user_store.price()
 
     result['goods_list'] = goods_list
     response = parse_info(result)

@@ -893,20 +893,6 @@ class OrderManager(object):
         return {'message': 'ok', 'order_id': order_id}
 
     @staticmethod
-    def get_order_goods_detail(order_id):
-        result = []
-        goods = OrderDetail.objects.filter(order_id=order_id)
-
-        for i in goods:
-            result.append({'goods_id': i.goods.goods_id,
-                           'goods_name': i.goods.goods_name,
-                           'goods_spec': i.goods.goods_spec,
-                           'goods_count': i.goods_count,
-                           'total_price': str(i.total_price)})
-
-        return result
-
-    @staticmethod
     def set_order_status(order, order_type, pay_from=None, ps_user=None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
@@ -1007,40 +993,16 @@ class PeiSongManager(object):
     @staticmethod
     def get_peisong_order_info(order):
         peisong_detail = {}
-        store_info = order.store.info()
-        goods_info = order.goods_info()
-
         peisong_detail['order_info'] = order.info()
-        peisong_detail['goods_info'] = goods_info
-
-        peisong_detail['store_info'] = {}
-        peisong_detail['store_info']['name'] = store_info['name']
-        peisong_detail['store_info']['phone'] = store_info['phone']
-        peisong_detail['store_info']['addr'] = store_info['addr']
+        peisong_detail['goods_info'] = order.goods_info()
+        peisong_detail['store_info'] = order.store.info()
 
         return peisong_detail
 
     @staticmethod
     def get_pick_order_info(order):
-        order_info = {}
-        goods_info = []
-
-        order_info['order_id'] = str(order.order_id)
-        order_info['create_time'] = str(order.create_time)
-        order_info['order_type'] = order.order_type
-        order_info['confirm_time'] = str(order.confirm_time)
-        order_info['is_modify'] = order.is_modify
-
-        for i in order.get_order_detail():
-            goods_info.append({
-                'goods_id': i.goods.goods_id,
-                'goods_name': i.goods.goods_name,
-                'goods_spec': i.goods.goods_spec,
-                'goods_count': i.goods_count
-            }
-            )
-        return {'order_info': order_info,
-                'goods_info': goods_info}
+        return {'order_info': order.info(),
+                'goods_info': order.goods_info()}
 
     def get_receive_peisong(self):
         """
@@ -1159,17 +1121,11 @@ class PeiSongManager(object):
             if i.goods_type == 0:
                 if i.goods_stock == 0:
                     continue
-                result.append({'goods_id': i.goods.goods_id,
-                               'goods_name': i.goods.goods_name,
-                               'goods_spec': i.goods.goods_spec,
-                               'goods_stock': int(i.goods_stock)})
+                result.append(i.info())
             else:
                 if i.goods_stock == 0:
                     continue
-                old_info.append({'goods_id': i.goods.goods_id,
-                                 'goods_name': i.goods.goods_name,
-                                 'goods_spec': i.goods.goods_spec,
-                                 'goods_stock': int(i.goods_stock)})
+                old_info.append(i.info())
 
         return {'message': 'ok',
                 'info': result,
@@ -1366,24 +1322,8 @@ class RecoverManager(object):
 
     @staticmethod
     def get_recover_order_info(order):
-        goods_info = []
-        order_info = {}
-        goods_pool_info = order.get_order_detail()
-        for i in goods_pool_info:
-            goods_info.append({'goods_id': i.goods.goods_id,
-                               'goods_name': i.goods.goods_name,
-                               'goods_spec': i.goods.goods_spec,
-                               'goods_count': i.goods_count})
-
-        order_info['order_id'] = str(order.order_id)
-        order_info['create_time'] = str(order.create_time)
-        order_info['create_timestamp'] = time.mktime(order.create_time.timetuple()),
-        order_info['store_name'] = order.store.store_name
-        order_info['store_phone'] = order.store.store_phone
-        order_info['store_addr'] = order.store.store_addr
-
-        return {'order_info': order_info,
-                'goods_lnfo': goods_info}
+        return {'order_info': order.info(),
+                'goods_lnfo': order.goods_info()}
 
     def cancel_recover_order(self):
         order_id = self.order_id
