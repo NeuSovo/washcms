@@ -128,6 +128,31 @@ class Store(models.Model):
     def __len__(self):
         return len(Store.store_all())
 
+    def info(self):
+        return {'id': self.store_id,
+                'name': self.store_name,
+                'area': self.store_area.id,
+                'area_name': self.store_area.area_name,
+                'phone': self.store_phone,
+                'addr': self.store_addr,
+                'deposite': self.store_deposit,
+                'pay_type': self.store_pay_type}
+
+    def price(self):
+        all_store_price = StoreGoods.objects.filter(store=self)
+        result = []
+        for i in all_store_price:
+            result.append(
+                {'goods_id': i.goods.goods_id,
+                 'goods_name': i.goods.goods_name,
+                 'goods_spec': i.goods.goods_spec,
+                 'goods_price': float(i.goods_price),
+                 'goods_stock': i.goods.goods_stock,
+                 'goods_store_stock': i.goods_stock,
+                 'is_recover': i.goods.is_recover})
+
+        return result
+
 
 class CustomerProfile(models.Model):
 

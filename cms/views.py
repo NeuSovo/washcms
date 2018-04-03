@@ -228,7 +228,7 @@ def change_profile_view(request, user):
 
     if action == 'get':
         print(action)
-        store_info = StoreManager.get_store_info(user_store)
+        store_info = user_store.info()
 
         if 'message' in store_info:
             return store_info
@@ -238,8 +238,7 @@ def change_profile_view(request, user):
 
     if action == 'set':
         this_store = UserManager.set_user_store_profile(user, body)
-        result['new_store_info'] = StoreManager.get_store_info(
-            this_store)
+        result['new_store_info'] = this_store.info()
         result['message'] = 'ok'
 
     response = parse_info(result)
