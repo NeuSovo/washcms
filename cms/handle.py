@@ -938,22 +938,6 @@ class OrderManager(object):
         return result
 
     @staticmethod
-    def get_order_simple_detail(order_id):
-        order = Order.objects.get(order_id=order_id)
-        return {
-            'order_id': str(order.order_id),
-            'create_time': str(order.create_time),
-            'create_timestamp': time.mktime(order.create_time.timetuple()),
-            'order_type': order.order_type,
-            'pay_type': order.pay_type,
-            'order_total_price': str(order.order_total_price),
-            'receive_time': str(order.receive_time),
-            'pay_from': order.pay_from,
-            'remarks': order.order_remarks,
-            'done_time': str(order.done_time)
-        }
-
-    @staticmethod
     def set_order_status(order, order_type, pay_from=None, ps_user=None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
@@ -995,10 +979,15 @@ class OrderManager(object):
         return self.save_order()
 
     def detail_order(self):
-        order_id = int(self.data['order_id'])
-        order_info = OrderManager.get_order_simple_detail(order_id)
+        order_id = int(self.data.get('order_id', 0))
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
 
-        order_goods = OrderManager.get_order_goods_detail(order_id)
+        order_info = order.info()
+
+        order_goods = order.goods_info()
         return {'message': 'ok',
                 'info': order_info,
                 'goods': order_goods}
@@ -1025,7 +1014,7 @@ class OrderManager(object):
 
         for i in order_list:
             status_order.append(
-                OrderManager.get_order_simple_detail(i.order_id))
+                i.info())
 
         return {'message': 'ok', 'info': status_order}
 

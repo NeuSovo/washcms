@@ -1,3 +1,4 @@
+import time
 from django.db import models
 from django.utils import timezone
 from datetime import datetime,timedelta
@@ -276,7 +277,34 @@ class Order(models.Model):
         ordering = ['-create_time']
 
     def get_order_detail(self):
-        return OrderDetail.objects.filter(order_id=self.order_id)   
+        return OrderDetail.objects.filter(order_id=self.order_id)
+
+    def info(self):
+        return {
+            'order_id': str(self.order_id),
+            'create_time': str(self.create_time),
+            'create_timestamp': time.mktime(self.create_time.timetuple()),
+            'order_type': self.order_type,
+            'pay_type': self.pay_type,
+            'order_total_price': str(self.order_total_price),
+            'receive_time': str(self.receive_time),
+            'pay_from': self.pay_from,
+            'remarks': self.order_remarks,
+            'done_time': str(self.done_time)
+        }
+
+    def goods_info(self):
+        result = []
+        goods = OrderDetail.objects.filter(order_id=self.order_id)
+
+        for i in goods:
+            result.append({'goods_id': i.goods.goods_id,
+                           'goods_name': i.goods.goods_name,
+                           'goods_spec': i.goods.goods_spec,
+                           'goods_count': i.goods_count,
+                           'total_price': str(i.total_price)})
+
+        return result
 
     pay_type_level = (
         (0, '日结'),
