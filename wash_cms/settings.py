@@ -30,7 +30,7 @@ ALLOWED_HOSTS = ['*']
 # Logging
 
 ADMINS = (
-    ('Admins','1510180157@qq.com'),
+    ('Admins','*'),
 )
  
 #
@@ -41,8 +41,8 @@ MANAGERS = ADMINS
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST= 'smtp.exmail.qq.com'
 EMAIL_PORT= 465        
-EMAIL_HOST_USER = 'i@zxh326.cn'  
-EMAIL_HOST_PASSWORD = 'Zxh326//' 
+EMAIL_HOST_USER = '*'  
+EMAIL_HOST_PASSWORD = '*' 
 EMAIL_SUBJECT_PREFIX = 'website' 
 EMAIL_USE_SSL = True 
 DEFAULT_FROM_EMAIL = SERVER_EMAIL = EMAIL_HOST_USER 
@@ -179,7 +179,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'washcms',
-        'USER': 'root',
+        'USER': 'washcms',
         'PASSWORD': '123456',
         'HOST': '127.0.0.1',
         'PORT': '3306',
@@ -225,4 +225,4 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR + '\static'
+STATIC_ROOT = BASE_DIR + '/static'
