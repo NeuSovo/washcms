@@ -198,7 +198,7 @@ def get_user_goods_view(request, user):
 
     user_store = UserManager.get_user_store(user).store
     result['message'] = 'ok'
-    goods_list = StoreManager.get_store_price(user_store)
+    goods_list = user_store.price()
 
     result['goods_list'] = goods_list
     response = parse_info(result)
@@ -228,7 +228,7 @@ def change_profile_view(request, user):
 
     if action == 'get':
         print(action)
-        store_info = StoreManager.get_store_info(user_store)
+        store_info = user_store.info()
 
         if 'message' in store_info:
             return store_info
@@ -238,8 +238,7 @@ def change_profile_view(request, user):
 
     if action == 'set':
         this_store = UserManager.set_user_store_profile(user, body)
-        result['new_store_info'] = StoreManager.get_store_info(
-            this_store)
+        result['new_store_info'] = this_store.info()
         result['message'] = 'ok'
 
     response = parse_info(result)

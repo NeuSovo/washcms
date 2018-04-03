@@ -505,11 +505,7 @@ class StoreManager(object):
             this_store.store_deposit = data['deposit']
             this_store.save()
 
-            new_info = {'id': this_store.store_id,
-                        'name': this_store.store_name,
-                        'area': this_store.store_area.area_name,
-                        'pay_type': this_store.store_pay_type,
-                        'deposit': this_store.store_deposit}
+            new_info = this_store.info()
 
             return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
@@ -522,7 +518,7 @@ class StoreManager(object):
         except Exception as e:
             return {'message': 'store_id not exist'}
 
-        goods_list = StoreManager.get_store_price(store)
+        goods_list = store.price()
         return {'message': 'ok', 'goods_list': goods_list}
 
     def setprice_store(self):
@@ -534,7 +530,7 @@ class StoreManager(object):
 
         try:
             store = Store.objects.get(store_id=store_id)
-            store_goods = StoreGoods.objects.filter(store=store)
+            store_goods = store.price()
         except Exception as e:
             return {'message': 'store_id is not exists'}
 
@@ -570,36 +566,9 @@ class StoreManager(object):
         all_store = Store.store_all()
         all_store_list = []
         for store in all_store:
-            all_store_list.append(StoreManager.get_store_info(store))
+            all_store_list.append(store.info())
 
         return {'message': 'ok', 'info': all_store_list}
-
-    @staticmethod
-    def get_store_price(store):
-        all_store_price = StoreGoods.objects.filter(store=store)
-        result = []
-        for i in all_store_price:
-            result.append(
-                {'goods_id': i.goods.goods_id,
-                 'goods_name': i.goods.goods_name,
-                 'goods_spec': i.goods.goods_spec,
-                 'goods_price': float(i.goods_price),
-                 'goods_stock': i.goods.goods_stock,
-                 'goods_store_stock': i.goods_stock,
-                 'is_recover': i.goods.is_recover})
-
-        return result
-
-    @staticmethod
-    def get_store_info(store):
-        return {'id': store.store_id,
-                'name': store.store_name,
-                'area': store.store_area.id,
-                'area_name': store.store_area.area_name,
-                'phone': store.store_phone,
-                'addr': store.store_addr,
-                'deposite': store.store_deposit,
-                'pay_type': store.store_pay_type}
 
     @staticmethod
     def sync_store_stock(order, ps_user=None, new=True):
@@ -924,36 +893,6 @@ class OrderManager(object):
         return {'message': 'ok', 'order_id': order_id}
 
     @staticmethod
-    def get_order_goods_detail(order_id):
-        result = []
-        goods = OrderDetail.objects.filter(order_id=order_id)
-
-        for i in goods:
-            result.append({'goods_id': i.goods.goods_id,
-                           'goods_name': i.goods.goods_name,
-                           'goods_spec': i.goods.goods_spec,
-                           'goods_count': i.goods_count,
-                           'total_price': str(i.total_price)})
-
-        return result
-
-    @staticmethod
-    def get_order_simple_detail(order_id):
-        order = Order.objects.get(order_id=order_id)
-        return {
-            'order_id': str(order.order_id),
-            'create_time': str(order.create_time),
-            'create_timestamp': time.mktime(order.create_time.timetuple()),
-            'order_type': order.order_type,
-            'pay_type': order.pay_type,
-            'order_total_price': str(order.order_total_price),
-            'receive_time': str(order.receive_time),
-            'pay_from': order.pay_from,
-            'remarks': order.order_remarks,
-            'done_time': str(order.done_time)
-        }
-
-    @staticmethod
     def set_order_status(order, order_type, pay_from=None, ps_user=None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
@@ -995,10 +934,15 @@ class OrderManager(object):
         return self.save_order()
 
     def detail_order(self):
-        order_id = int(self.data['order_id'])
-        order_info = OrderManager.get_order_simple_detail(order_id)
+        order_id = int(self.data.get('order_id', 0))
+        try:
+            order = Order.objects.get(order_id=order_id)
+        except Exception as e:
+            return {'message': 'order_id failed'}
 
-        order_goods = OrderManager.get_order_goods_detail(order_id)
+        order_info = order.info()
+
+        order_goods = order.goods_info()
         return {'message': 'ok',
                 'info': order_info,
                 'goods': order_goods}
@@ -1025,7 +969,7 @@ class OrderManager(object):
 
         for i in order_list:
             status_order.append(
-                OrderManager.get_order_simple_detail(i.order_id))
+                i.info())
 
         return {'message': 'ok', 'info': status_order}
 
@@ -1049,49 +993,16 @@ class PeiSongManager(object):
     @staticmethod
     def get_peisong_order_info(order):
         peisong_detail = {}
-        store_info = StoreManager.get_store_info(store=order.store)
-        goods_info = OrderManager.get_order_goods_detail(
-            order_id=order.order_id)
-
-        peisong_detail['order_info'] = {}
-        peisong_detail['order_info']['order_id'] = str(order.order_id)
-        peisong_detail['order_info']['create_time'] = str(order.create_time)
-        peisong_detail['order_info']['receive_time'] = str(order.receive_time)
-        peisong_detail['order_info']['order_total_price'] = str(
-            order.order_total_price)
-        peisong_detail['order_info']['pay_type'] = order.pay_type
-        peisong_detail['order_info']['remarks'] = order.order_remarks
-
-        peisong_detail['goods_info'] = goods_info
-
-        peisong_detail['store_info'] = {}
-        peisong_detail['store_info']['name'] = store_info['name']
-        peisong_detail['store_info']['phone'] = store_info['phone']
-        peisong_detail['store_info']['addr'] = store_info['addr']
+        peisong_detail['order_info'] = order.info()
+        peisong_detail['goods_info'] = order.goods_info()
+        peisong_detail['store_info'] = order.store.info()
 
         return peisong_detail
 
     @staticmethod
     def get_pick_order_info(order):
-        order_info = {}
-        goods_info = []
-
-        order_info['order_id'] = str(order.order_id)
-        order_info['create_time'] = str(order.create_time)
-        order_info['order_type'] = order.order_type
-        order_info['confirm_time'] = str(order.confirm_time)
-        order_info['is_modify'] = order.is_modify
-
-        for i in order.get_order_detail():
-            goods_info.append({
-                'goods_id': i.goods.goods_id,
-                'goods_name': i.goods.goods_name,
-                'goods_spec': i.goods.goods_spec,
-                'goods_count': i.goods_count
-            }
-            )
-        return {'order_info': order_info,
-                'goods_info': goods_info}
+        return {'order_info': order.info(),
+                'goods_info': order.goods_info()}
 
     def get_receive_peisong(self):
         """
@@ -1210,17 +1121,11 @@ class PeiSongManager(object):
             if i.goods_type == 0:
                 if i.goods_stock == 0:
                     continue
-                result.append({'goods_id': i.goods.goods_id,
-                               'goods_name': i.goods.goods_name,
-                               'goods_spec': i.goods.goods_spec,
-                               'goods_stock': int(i.goods_stock)})
+                result.append(i.info())
             else:
                 if i.goods_stock == 0:
                     continue
-                old_info.append({'goods_id': i.goods.goods_id,
-                                 'goods_name': i.goods.goods_name,
-                                 'goods_spec': i.goods.goods_spec,
-                                 'goods_stock': int(i.goods_stock)})
+                old_info.append(i.info())
 
         return {'message': 'ok',
                 'info': result,
@@ -1417,24 +1322,8 @@ class RecoverManager(object):
 
     @staticmethod
     def get_recover_order_info(order):
-        goods_info = []
-        order_info = {}
-        goods_pool_info = order.get_order_detail()
-        for i in goods_pool_info:
-            goods_info.append({'goods_id': i.goods.goods_id,
-                               'goods_name': i.goods.goods_name,
-                               'goods_spec': i.goods.goods_spec,
-                               'goods_count': i.goods_count})
-
-        order_info['order_id'] = str(order.order_id)
-        order_info['create_time'] = str(order.create_time)
-        order_info['create_timestamp'] = time.mktime(order.create_time.timetuple()),
-        order_info['store_name'] = order.store.store_name
-        order_info['store_phone'] = order.store.store_phone
-        order_info['store_addr'] = order.store.store_addr
-
-        return {'order_info': order_info,
-                'goods_lnfo': goods_info}
+        return {'order_info': order.info(),
+                'goods_lnfo': order.goods_info()}
 
     def cancel_recover_order(self):
         order_id = self.order_id

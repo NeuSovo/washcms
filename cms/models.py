@@ -1,3 +1,4 @@
+import time
 from django.db import models
 from django.utils import timezone
 from datetime import datetime,timedelta
@@ -127,6 +128,31 @@ class Store(models.Model):
     def __len__(self):
         return len(Store.store_all())
 
+    def info(self):
+        return {'id': self.store_id,
+                'name': self.store_name,
+                'area': self.store_area.id,
+                'area_name': self.store_area.area_name,
+                'phone': self.store_phone,
+                'addr': self.store_addr,
+                'deposite': self.store_deposit,
+                'pay_type': self.store_pay_type}
+
+    def price(self):
+        all_store_price = StoreGoods.objects.filter(store=self)
+        result = []
+        for i in all_store_price:
+            result.append(
+                {'goods_id': i.goods.goods_id,
+                 'goods_name': i.goods.goods_name,
+                 'goods_spec': i.goods.goods_spec,
+                 'goods_price': float(i.goods_price),
+                 'goods_stock': i.goods.goods_stock,
+                 'goods_store_stock': i.goods_stock,
+                 'is_recover': i.goods.is_recover})
+
+        return result
+
 
 class CustomerProfile(models.Model):
 
@@ -211,6 +237,12 @@ class PeisongCarStock(models.Model):
         (1, '旧货')
         )
 
+    def info(self):
+        return {'goods_id': i.goods.goods_id,
+                'goods_name': i.goods.goods_name,
+                'goods_spec': i.goods.goods_spec,
+                'goods_stock': int(i.goods_stock)}
+
     class Meta:
         verbose_name = "配送员车上货物"
         verbose_name_plural = "PeisongCarStocks"
@@ -276,7 +308,34 @@ class Order(models.Model):
         ordering = ['-create_time']
 
     def get_order_detail(self):
-        return OrderDetail.objects.filter(order_id=self.order_id)   
+        return OrderDetail.objects.filter(order_id=self.order_id)
+
+    def info(self):
+        return {
+            'order_id': str(self.order_id),
+            'create_time': str(self.create_time),
+            'create_timestamp': time.mktime(self.create_time.timetuple()),
+            'order_type': self.order_type,
+            'pay_type': self.pay_type,
+            'order_total_price': str(self.order_total_price),
+            'receive_time': str(self.receive_time),
+            'pay_from': self.pay_from,
+            'remarks': self.order_remarks,
+            'done_time': str(self.done_time)
+        }
+
+    def goods_info(self):
+        result = []
+        goods = OrderDetail.objects.filter(order_id=self.order_id)
+
+        for i in goods:
+            result.append({'goods_id': i.goods.goods_id,
+                           'goods_name': i.goods.goods_name,
+                           'goods_spec': i.goods.goods_spec,
+                           'goods_count': i.goods_count,
+                           'total_price': str(i.total_price)})
+
+        return result
 
     pay_type_level = (
         (0, '日结'),
@@ -380,6 +439,27 @@ class PickOrder(models.Model):
 
     def get_order_detail(self):
         return PickOrderDetail.objects.filter(order_id=self.order_id)    
+    
+    def info(self):
+        return {
+            'order_id': str(self.order_id),
+            'create_time': str(self.create_time),
+            'order_type': self.order_type,
+            'confirm_time': str(self.confirm_time),
+            'is_modify': self.is_modify
+        }
+
+    def goods_info(self):
+        result = []
+        goods = PickOrderDetail.objects.filter(order_id=self.order_id)
+
+        for i in goods:
+            result.append({'goods_id': i.goods.goods_id,
+                           'goods_name': i.goods.goods_name,
+                           'goods_spec': i.goods.goods_spec,
+                           'goods_count': i.goods_count})
+
+        return result
 
     modify_level = (
         (0, '未被修改'),
@@ -446,6 +526,30 @@ class RecoverOrder(models.Model):
         verbose_name = "RecoverOrder"
         verbose_name_plural = "RecoverOrders"
 
+    def info(self):
+        return {
+            'order_id' : str(self.order_id),
+            'create_time' : str(self.create_time),
+            'create_timestamp' : time.mktime(self.create_time.timetuple()),
+            'store_name' : self.store.store_name,
+            'store_phone' : self.store.store_phone,
+            'store_addr' : self.store.store_addr,
+        }
+
+    def goods_info(self):
+        result = []
+        goods = RecoverModelDetail.objects.filter(order_id=self.order_id)
+
+        for i in goods:
+            result.append({'goods_id': i.goods.goods_id,
+                           'goods_name': i.goods.goods_name,
+                           'goods_spec': i.goods.goods_spec,
+                           'goods_count': i.goods_count})
+
+        return result
+
+
+
     order_id = models.BigIntegerField(
                     primary_key=True
                 )
@@ -477,9 +581,7 @@ class RecoverOrder(models.Model):
                 null=True,
                 blank=True
                 )
-
-    def get_order_detail(self):
-        return RecoverModelDetail.objects.filter(order_id=self.order_id)    
+  
  
 class RecoverModelDetail(models.Model):
 
