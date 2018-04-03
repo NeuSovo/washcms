@@ -28,7 +28,7 @@ def parse_info(data):
     parse dict data to json,and return HttpResponse
     """
     return JsonResponse(data)
-    
+
 
 def usercheck(user_type=-1):
     def wrapper(func):
@@ -594,7 +594,7 @@ class StoreManager(object):
                         wk=ps_user, goods=i.goods, goods_type=goods_type)
                 except Exception as e:
                     if new:
-                    # 看实际情况再决定加不加
+                        # 看实际情况再决定加不加
                         # return {'message': '车上没有此物品!'}
                         raise e
                     else:
@@ -1275,8 +1275,8 @@ class RecoverManager(object):
     def __init__(self, user, **kwargs):
         self.user = user
         self.store_user = UserManager.get_user_store(self.user)
-        self.goods_list = kwargs.get('goods_list',None)
-        self.order_id = int(kwargs.get('order_id',0))
+        self.goods_list = kwargs.get('goods_list', None)
+        self.order_id = int(kwargs.get('order_id', 0))
 
     def new_recover_order(self):
         order_id = OrderManager.gen_order_id()
@@ -1342,14 +1342,14 @@ class RecoverManager(object):
             order.save()
             return {'message': 'ok'}
 
-
     def status_recover_order(self):
         try:
-            order_pool = RecoverOrder.objects.filter(store=self.store_user.store,order_type=1)
+            order_pool = RecoverOrder.objects.filter(
+                store=self.store_user.store, order_type=1)
         except:
             return {'message': 'order_id error'}
 
         info = [RecoverManager.get_recover_order_info(i) for i in order_pool]
         return {'message': 'ok',
-                'info': info }
+                'info': info}
 #
