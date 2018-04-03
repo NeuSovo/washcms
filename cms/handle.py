@@ -628,8 +628,8 @@ class StoreManager(object):
                 except Exception as e:
                     if new:
                     # 看实际情况再决定加不加
-                        return {'message': '车上没有此物品!'}
-                        # raise e
+                        # return {'message': '车上没有此物品!'}
+                        raise e
                     else:
                         car_goods = PeisongCarStock(
                             wk=ps_user, goods=i.goods, goods_type=goods_type)
