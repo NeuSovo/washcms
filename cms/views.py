@@ -2,6 +2,7 @@
 import json
 import qrcode
 
+from django.http import JsonResponse
 from django.utils.six import BytesIO
 from django.shortcuts import HttpResponse
 
@@ -17,8 +18,7 @@ def parse_info(data):
     :param data must be a dict
     :return dict data to json,and return HttpResponse
     """
-    return HttpResponse(json.dumps(data, indent=4),
-                        content_type="application/json")
+    return JsonResponse(data)
 
 
 def index(request):

@@ -11,8 +11,7 @@ from datetime import datetime, timedelta
 
 from django.db.models import Q
 from django.conf import settings
-from django.shortcuts import HttpResponse
-
+from django.http import JsonResponse
 from cms.models import *
 from cms.apps import APIServerErrorCode as ASEC
 
@@ -28,8 +27,7 @@ def parse_info(data):
     param must be a dict
     parse dict data to json,and return HttpResponse
     """
-    return HttpResponse(json.dumps(data, indent=4),
-                        content_type="application/json")
+    return JsonResponse(data)
     
 
 def usercheck(user_type=-1):
