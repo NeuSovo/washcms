@@ -238,10 +238,10 @@ class PeisongCarStock(models.Model):
         )
 
     def info(self):
-        return {'goods_id': i.goods.goods_id,
-                'goods_name': i.goods.goods_name,
-                'goods_spec': i.goods.goods_spec,
-                'goods_stock': int(i.goods_stock)}
+        return {'goods_id': self.goods.goods_id,
+                'goods_name': self.goods.goods_name,
+                'goods_spec': self.goods.goods_spec,
+                'goods_stock': int(self.goods_stock)}
 
     class Meta:
         verbose_name = "配送员车上货物"
