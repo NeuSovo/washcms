@@ -445,6 +445,7 @@ class PickOrder(models.Model):
             'order_id': str(self.order_id),
             'create_time': str(self.create_time),
             'order_type': self.order_type,
+            'order_status': self.order_status,
             'confirm_time': str(self.confirm_time),
             'is_modify': self.is_modify
         }
@@ -466,6 +467,10 @@ class PickOrder(models.Model):
         (1, '被修改')
         )
     order_type_level = (
+        (0, '领货订单'),
+        (1, '回库订单')
+        )
+    order_status_level = (
         (-1, '取消'),
         (0, '已确认'),
         (1, '未确认')
@@ -473,30 +478,33 @@ class PickOrder(models.Model):
 
     order_id = models.BigIntegerField(
                     primary_key=True
-                )
-    order_type = models.IntegerField(
-                choices=order_type_level,
+            )
+    order_status = models.IntegerField(
+                choices=order_status_level,
                 default=1
-                )
+            )
+    order_type = models.IntegerField(
+                default=0
+            )
     create_time = models.DateTimeField(
                     auto_now_add=True
-                )
+            )
     pick_user = models.ForeignKey(
                     PeisongProfile,
                     on_delete=models.CASCADE
-                )
+            )
     confirm_user = models.ForeignKey(
                     User,
                     null=True,
                     on_delete=models.CASCADE
-                )
+            )
     confirm_time = models.DateTimeField(
                     null=True,
                     blank=True
-                )
+            )
     is_modify = models.IntegerField(
                 default=0
-                )
+            )
     
 
 class PickOrderDetail(models.Model):

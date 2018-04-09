@@ -390,6 +390,13 @@ def staff_kuguan_pick_view(request, action, user):
     return response
 
 
+@usercheck(user_type=1):
+def staff_kuguan_goods_view(request, action, user):
+    result = {}
+    body = json.loads(request.body)
+    
+
+
 def test_test_view(request):
 
     action = request.GET.get('action', 'all')

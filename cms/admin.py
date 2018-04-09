@@ -165,7 +165,7 @@ class PickOrderAdmin(admin.ModelAdmin):
         Admin View for PickOrder
     '''
 
-    list_display = ('order_type', 'create_time', 'pick_user', 'confirm_time')
+    list_display = ('order_status', 'create_time', 'pick_user', 'confirm_time')
 
 
 admin.site.register(PickOrder, PickOrderAdmin)

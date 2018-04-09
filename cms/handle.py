@@ -464,7 +464,7 @@ class StoreManager(object):
         return {'message': 'ok', 'id': new_store.store_id}
 
     def del_store(self):
-        # TODO
+        # [TODO]
         # 删除动作加入消息队列
         # 减少用户访问时间
         try:
@@ -571,7 +571,7 @@ class StoreManager(object):
     @staticmethod
     def sync_store_stock(order, ps_user=None, new=True):
 
-        # TODO
+        # [TODO]
         # if new : 新货 car[-],store[+]
         # Sync Car Stock
         # 消息队列
@@ -730,21 +730,33 @@ class GoodsManager(object):
         self.action = action
 
     @staticmethod
-    def sync_goods_stock(order):
+    def sync_goods_stock(order, new=True):
         goods_pool = PickOrderDetail.objects.filter(order_id=order.order_id)
         try:
             for i in goods_pool:
-                i.goods.goods_stock -= i.goods_count
+                if new:
+                    # [TODO] 旧货到底去哪?
+                    i.goods.goods_stock -= i.goods_count
 
                 try:
-                    car_goods = PeisongCarStock.objects.get(
-                        wk=order.pick_user, goods=i.goods)
-                    car_goods.goods_stock += i.goods_count
+                    if new:
+                        car_goods = PeisongCarStock.objects.get(
+                            wk=order.pick_user, goods=i.goods)
+                        car_goods.goods_stock += i.goods_count
+                    else:
+                        # [TODO] 车上新货回收？
+                        car_goods = PeisongCarStock.objects.get(
+                            wk=order.pick_user, goods=i.goods, goods_type=1)
+                        car_goods.goods_stock -= i.goods_count
+
                     car_goods.save()
-                except:
-                    car_goods = PeisongCarStock(
-                        wk=order.pick_user, goods=i.goods, goods_stock=i.goods_count)
-                    car_goods.save()
+                except Exception as e:
+                    if new:      
+                        car_goods = PeisongCarStock(
+                            wk=order.pick_user, goods=i.goods, goods_stock=i.goods_count)
+                        car_goods.save()
+                    else:
+                        raise e
 
                 i.goods.save()
         except Exception as e:
@@ -766,6 +778,18 @@ class GoodsManager(object):
         new_goods.save()
 
         return {'message': 'ok', 'id': new_goods.goods_id}
+
+    def add_stock(self):
+        try:
+            goods_id = int(self.data.get('goods_id', 0))
+            count = int(self.data.get('count', 0))
+            goods = Goods.objects.get(goods_id=goods_id)
+        except Exception:
+            return {'message': 'goods_id not exist'}
+
+        goods.stock += count
+        goods.save()
+        return {'message': 'ok', 'new_stock': goods.stock}
 
     def del_goods(self):
         goods_id = int(self.data['goods_id'])
@@ -840,7 +864,7 @@ class OrderManager(object):
 
         def save_order_detail(order_id, store):
             """
-            TODO despoit
+            [TODO] despoit
             """
             pack_goods = self.data['goods_list']
             order_all_goods = []
@@ -1184,8 +1208,8 @@ class PeiSongManager(object):
         info = save_pick_detail(order_id, self.data['goods_list'])
         if info['message'] != 'ok':
             return info
-
-        PickOrder(order_id=order_id, pick_user=pick_user).save()
+        order_type = self.data.get('order_type',0)
+        PickOrder(order_id=order_id, pick_user=pick_user, order_type=order_type).save()
         info['order_id'] = order_id
 
         return info
@@ -1212,7 +1236,7 @@ class KuGuanManager(object):
         self.user = user
 
     def get_pick(self):
-        order_pool = PickOrder.objects.filter(order_type=1)
+        order_pool = PickOrder.objects.filter(order_status=1)
         info = []
         for i in order_pool:
             t_info = PeiSongManager.get_pick_order_info(i)
@@ -1225,20 +1249,23 @@ class KuGuanManager(object):
                 'info': info}
 
     def confirm_pick(self):
-        order_id = int(self.data.get('order_id', 0))
-
         try:
+            order_id = int(self.data.get('order_id', 0))
             order = PickOrder.objects.get(order_id=order_id)
         except:
             return {'message': 'order_id error'}
 
         # todo goods_list
-        if order.order_type == 0:
+        if order.order_status == 0:
             return {'message': 'failed'}
 
-        info = GoodsManager.sync_goods_stock(order)
+        if order.order_type == 0:
+            info = GoodsManager.sync_goods_stock(order)
+        else:
+            info = GoodsManager.sync_goods_stock(order, new=False)
+
         if info['message'] == 'ok':
-            order.order_type = 0
+            order.order_status = 0
             order.confirm_time = datetime.now()
             order.confirm_user = self.user
             order.save()

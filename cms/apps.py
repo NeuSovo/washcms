@@ -30,7 +30,7 @@ class APIServerErrorCode(object):
                 code = CodeRecord.objects.get(code_key=errorCode)
                 code.code_count += 1
                 code.save()
-            except Exception as e:
+            except Exception:
                 pass
 
             return CodeMessage[errorCode]
