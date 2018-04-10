@@ -2,6 +2,7 @@
 import os
 import json
 import time
+import redis
 import base64
 import random
 import logging
@@ -19,7 +20,7 @@ from cms.apps import APIServerErrorCode as ASEC
 
 app = logging.getLogger('app.custom')
 request_backup = logging.getLogger('app.backup')
-
+r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
 
 def parse_info(data):
     """
@@ -562,17 +563,19 @@ class StoreManager(object):
 
     def report_store(self):
         user_store = UserManager.get_user_store(self.user).store
-        
+
         today = datetime.now()
         month = self.data.get('month', today.month)
         if month <= 0 or month > 12:
             month = today.month
-        
+
         money_sum = no_done_sum = no_pay_sum = 0
-        
-        order_pool = Order.objects.filter(store=user_store, create_time__month=month)
-        recover_order_pool = RecoverOrder.objects.filter(store=user_store, create_time__month=month)
-        
+
+        order_pool = Order.objects.filter(
+            store=user_store, create_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(
+            store=user_store, create_time__month=month)
+
         for i in order_pool.iterator():
             money_sum += i.order_total_price
             if i.order_type != 0:
@@ -589,6 +592,12 @@ class StoreManager(object):
         }
 
         return {'message': 'ok', 'info': info}
+
+    @staticmethod
+    def get_last_pay_time(store):
+        order = Order.objects.filter(store=store, order_type=1).order_by('receive_time')[:1]
+        for i in order:
+            return i.create_time.strftime("%Y-%m-%d")
 
     @staticmethod
     def all_store():
@@ -886,6 +895,13 @@ class OrderManager(object):
 
         return order_id
 
+    def getclear_order(self):
+        store = UserManager.get_user_store(self.user).store
+        if r.exists(store.store_id):
+            return eval(r.get(store.store_id))
+
+        return {'message': 'None'}
+
     def save_order(self):
         user = self.user
         order_id = OrderManager.gen_order_id()
@@ -1129,7 +1145,8 @@ class PeiSongManager(object):
 
         return {'message': 'ok'}
 
-    def report_info(self, order_pool, recover_order_pool):
+    @staticmethod
+    def report_info(order_pool, recover_order_pool):
 
         pay_order_sum = no_pay_order_sum = month_pay_order_sum = 0
         pay_money_sum = xs_pay_sum = xx_pay_sum = 0
@@ -1160,27 +1177,38 @@ class PeiSongManager(object):
 
         return info
 
-    def today_report_peisong(self):
+    def day_report_peisong(self):
         today = datetime.now()
+        day = self.data.get('day', today.day)
 
-        order_pool = Order.objects.filter(order_type__lt=3, ps_user=self.ps_user,receive_time__month=today.month , receive_time__day=today.day)
-        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1, ps_user=self.ps_user,receive_time__month=today.month , receive_time__day=today.day)
+        order_pool = Order.objects.filter(order_type__lt=3,
+                                          ps_user=self.ps_user,
+                                          receive_time__month=today.month,
+                                          receive_time__day=day)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                         ps_user=self.ps_user,
+                                                         receive_time__month=today.month,
+                                                         receive_time__day=day)
 
-        info = self.report_info(order_pool, recover_order_pool)
+        info = PeiSongManager.report_info(order_pool, recover_order_pool)
         return {'message': 'ok',
                 'info': info}
 
     def month_report_peisong(self):
         today = datetime.now()
         month = self.data.get('month', today.month)
-        
+
         if month <= 0 or month > 12:
             month = today.month
 
-        order_pool = Order.objects.filter(order_type__lt=3, ps_user=self.ps_user,receive_time__month=month)
-        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1, ps_user=self.ps_user,receive_time__month=month)
+        order_pool = Order.objects.filter(order_type__lt=3,
+                                          ps_user=self.ps_user,
+                                          receive_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                         ps_user=self.ps_user,
+                                                         receive_time__month=month)
 
-        info = self.report_info(order_pool, recover_order_pool)
+        info = PeiSongManager.report_info(order_pool, recover_order_pool)
         return {'message': 'ok',
                 'info': info}
 
@@ -1250,7 +1278,6 @@ class PeiSongManager(object):
                                         group by cms_orderdetail.goods_id'.format(2, self.area.id))
 
         for i in info:
-           # print(i.goods_id.goods_name)
             goods_info = GoodsManager.get_goods_info(i.goods_id)
             result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
@@ -1466,4 +1493,117 @@ class RecoverManager(object):
         info = [RecoverManager.get_recover_order_info(i) for i in order_pool]
         return {'message': 'ok',
                 'info': info}
-#
+
+
+class BoosReport(object):
+    """docstring for BoosReport"""
+
+    def __init__(self, postdata=None, user=None):
+        self.data = postdata
+
+    def day_report(self):
+        today = datetime.now()
+        day = self.data.get('day', today.day)
+
+        order_pool = Order.objects.filter(order_type__lt=3,
+                                          receive_time__month=today.month,
+                                          receive_time__day=day)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                         receive_time__month=today.month,
+                                                         receive_time__day=day)
+
+        info = PeiSongManager.report_info(order_pool, recover_order_pool)
+        return {'message': 'ok',
+                'info': info}
+
+    def month_report(self):
+        today = datetime.now()
+        month = self.data.get('month', today.month)
+
+        if month <= 0 or month > 12:
+            month = today.month
+
+        order_pool = Order.objects.filter(order_type__lt=3,
+                                          receive_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                         receive_time__month=month)
+
+        info = PeiSongManager.report_info(order_pool, recover_order_pool)
+        return {'message': 'ok',
+                'info': info}
+
+
+class ClearAccount(object):
+    """docstring for ClearAccount"""
+    def __init__(self, postdata=None, key=None):
+        self.key = key
+        self.data = postdata
+        
+    def getmonth_clear(self):
+        info = []
+        store_pool = Store.objects.filter(store_pay_type=1)
+        for i in store_pool:
+            info.append({'stroe_id': i.store_id,
+                         'store_name': i.store_name,
+                         'is_clear': r.exists(i.store_id),
+                         'last_pay_time': StoreManager.get_last_pay_time(i)})
+
+        return {'message': 'ok',
+                'info': info}
+
+    def new_clear(self):
+        try:
+            store_id = int(self.data.get('store_id', 0))
+            store = Store.objects.get(store_id=store_id)
+        except Exception as e:
+            return {'message': 'store_id error'}
+
+        try:
+            b_time = datetime.strptime(self.data.get('b_time'), '%Y-%m-%d')
+            e_time = datetime.strptime(self.data.get('e_time'), '%Y-%m-%d')
+        except Exception:
+            if r.get(store_id):
+                return eval(r.get(store_id))
+            else:
+                return {'message': 'time error'}
+
+        order_pool = Order.objects.filter(Q(order_type=1,create_time__gte=b_time, create_time__lt=e_time))
+
+        info = []
+        total_price = 0
+        for i in order_pool:
+            t_info = i.info()
+            total_price += i.order_total_price
+            info.append(t_info)
+
+        result = {'message': 'ok',
+                  'total_price': str(total_price),
+                  'info': info}
+
+        r.set(store_id,result)
+        r.expire(store_id,86400)
+
+        return result
+
+    def confirm_clear(self):
+        try:
+            store_id = int(self.data.get('store_id', 0))
+            store = Store.objects.get(store_id=store_id)
+        except Exception as e:
+            return {'message': 'store_id error'}
+
+        if r.exists(store_id):
+            data = eval(r.get(store_id))
+        else:
+            return {'message': 'clear order expired'}
+
+        for i in data['info']:
+            try:
+                order = Order.objects.get(order_id=i['order_id'])
+            except Exception:
+                return {'message' : 'failed'}
+            info = OrderManager.set_order_status(order=order, order_type=0, pay_from=2)
+            if info['message'] != 'ok':
+                return info
+        r.delete(store_id)
+        return info

@@ -33,11 +33,12 @@ urlpatterns = [
     path('boss/store', change_store_view),
     path('boss/employee', change_employee_view),
     path('boss/goods', change_goods_view),
-    # path('boss/report/<str:action>'),# 
-    # boss/report/realtime/{order,
-    # boss/report/<str:action>
-    # boss/report/<str:action>
-    # boss/report/<str:action>
+    path('boss/clear/<str:action>',clear_account_view),
+
+    path('boss/report/order/<str:action>', boos_report_order_view),
+    path('boss/report/order/day/<int:day>', boos_report_order_view),
+    path('boss/report/order/month/<int:month>', boos_report_order_view),
+    # path('boss/report/peisong/month/<int:month>', boos_report_order_view),
 
     path('user/bind', bind_user_view),
     path('user/order', order_view),
@@ -60,8 +61,10 @@ urlpatterns = [
     path('staff/peisong/order/<str:status>/<str:action>', staff_peisong_order_view), # ,receive,pay,get,set
     path('staff/peisong/stock/<str:action>', staff_peisong_stock_view),       # car,ps
     path('staff/peisong/pick/<str:action>', staff_peisong_pick_view), # new,get
-    path('staff/peisong/report/<str:action>', staff_peisong_report_view), #today month
-    path('staff/peisong/report/<str:action>/<int:month>', staff_peisong_report_view), #today month
+    
+    path('staff/peisong/report/<str:action>', staff_peisong_report_view), #today
+    path('staff/peisong/report/month/<int:month>', staff_peisong_report_view), #month 
+    path('staff/peisong/report/day/<int:day>', staff_peisong_report_view), #day 
 
     path('test',test_test_view)
 

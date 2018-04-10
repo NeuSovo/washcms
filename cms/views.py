@@ -8,7 +8,8 @@ from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
                         usercheck, EmployeeManager, CustomerUserManager, GoodsManager,
-                        OrderManager, PeiSongManager, KuGuanManager, RecoverManager)
+                        OrderManager, PeiSongManager, KuGuanManager, RecoverManager,
+                        BoosReport, ClearAccount)
 from cms.apps import APIServerErrorCode as ASEC
 
 
@@ -104,12 +105,12 @@ def login_view(request, user):
     :param user:
     :return: user_type,user_info
     """
-    if 'HTTP_X_FORWARDED_FOR' in request.META:  
-        ip =  request.META['HTTP_X_FORWARDED_FOR']
-        print ('ip:',ip) 
-    else:  
+    if 'HTTP_X_FORWARDED_FOR' in request.META:
+        ip = request.META['HTTP_X_FORWARDED_FOR']
+        print('ip:', ip)
+    else:
         ip = request.META['REMOTE_ADDR']
-        print (ip) 
+        print(ip)
     result = {}
     body = json.loads(request.body)
     login = LoginManager(user=user)
@@ -166,6 +167,52 @@ def change_employee_view(request, user):
     response = parse_info(result.reply())
 
     return response
+
+
+@usercheck(user_type=0)
+def boos_report_order_view(request, user, action=None, day=None, month=None):
+    body = json.loads(request.body)
+
+    if day is not None:
+        body['day'] = day
+        action = 'day'
+
+    if month is not None:
+        body['month'] = month
+        action = 'month'
+
+    report = BoosReport(user=user, postdata=body)
+
+    try:
+        method_name = action + '_report'
+        result = getattr(report, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
+
+@usercheck(user_type=0)
+def clear_account_view(request, action=None, user=None):
+    body = json.loads(request.body)
+
+    clear = ClearAccount(postdata=body)
+    try:
+        method_name = action + '_clear'
+        result = getattr(clear, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
 
 
 @usercheck(user_type=1)
@@ -260,7 +307,7 @@ def order_2_view(request, user, action=None, status=None):
 
 
 @usercheck(user_type=3)
-def recover_view(request, user ,action=None):
+def recover_view(request, user, action=None):
     body = json.loads(request.body)
     recover = RecoverManager(user=user, **body)
 
@@ -295,6 +342,7 @@ def user_report_view(request, user, month=None):
     response = parse_info(result())
 
     return response
+
 
 @usercheck(user_type=2)
 def staff_profile_view(request, action, user):
@@ -338,11 +386,6 @@ def staff_peisong_order_view(request, status, action, user):
 
     body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
-
-    # get_receive_peisong
-    # set_receive_peisong
-    # get_pay_peisong
-    # set_pay_peisong
 
     try:
         method_name = action + '_' + status + '_peisong'
@@ -391,13 +434,18 @@ def staff_peisong_pick_view(request, action, user):
 
 
 @usercheck(user_type=2)
-def staff_peisong_report_view(request, action, user, month=None):
+def staff_peisong_report_view(request, user, action=None, month=None, day=None):
     result = {}
 
     body = json.loads(request.body)
 
     if month is not None:
         body['month'] = month
+        action = 'month'
+
+    if day is not None:
+        body['day'] = day
+        action = 'day'
 
     peisong = PeiSongManager(user=user, postdata=body)
 
