@@ -1181,10 +1181,10 @@ class PeiSongManager(object):
         today = datetime.now()
         day = self.data.get('day', today.day)
 
-        order_pool = Order.objects.filter(order_type__lt=3,
-                                          ps_user=self.ps_user,
-                                          receive_time__month=today.month,
-                                          receive_time__day=day)
+        order_pool = Order.objects.filter(Q(order_type__lt=2),
+                                          Q(ps_user=self.ps_user),
+                                          Q(receive_time__month=today.month),
+                                          Q(receive_time__day=day) | Q(done_time__day=day))
         recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
                                                          ps_user=self.ps_user,
                                                          receive_time__month=today.month,
