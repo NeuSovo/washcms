@@ -1574,7 +1574,7 @@ class ClearAccount(object):
         for i in order_pool:
             t_info = i.info()
             total_price += i.order_total_price
-            info.append(t_info)
+            info.append({'order_info': t_info,'goods_info':i.goods_info()})
 
         result = {'message': 'ok',
                   'total_price': str(total_price),
