@@ -47,17 +47,21 @@ urlpatterns = [
     path('user/order/<str:action>', order_2_view),
     path('user/order/<str:action>/<int:status>', order_2_view),
     path('user/recover/<str:action>', recover_view),
-    path('user/report/<str:action>', recover_view),
+
+    path('user/report', user_report_view),
+    path('user/report/<int:month>', user_report_view), # now, month
 
     path('staff/goods/<str:action>', staff_goods_view), # get,
     path('staff/kuguan/pick/<str:action>', staff_kuguan_pick_view), # get confirm
-    path('staff/kuguan/goods/<str:action>', staff_kuguan_goods_view) # new modify
-    # path('staff/kuguan/stock/<str:action>', ) # ([get] store,depot,peisong),([set] depot stock, +=)
+    path('staff/kuguan/goods/<str:action>', staff_kuguan_goods_view), # new addstock
+
 
     path('staff/peisong/profile/<str:action>', staff_profile_view),# get,update
     path('staff/peisong/order/<str:status>/<str:action>', staff_peisong_order_view), # ,receive,pay,get,set
     path('staff/peisong/stock/<str:action>', staff_peisong_stock_view),       # car,ps
     path('staff/peisong/pick/<str:action>', staff_peisong_pick_view), # new,get
+    path('staff/peisong/report/<str:action>', staff_peisong_report_view), #today month
+    path('staff/peisong/report/<str:action>/<int:month>', staff_peisong_report_view), #today month
 
     path('test',test_test_view)
 

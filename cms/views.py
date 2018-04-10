@@ -277,6 +277,25 @@ def recover_view(request, user ,action=None):
     return response
 
 
+@usercheck(user_type=3)
+def user_report_view(request, user, month=None):
+    body = json.loads(request.body)
+    if month is not None:
+        body['month'] = month
+    report = StoreManager(user=user, postdata=body)
+
+    try:
+        method_name = 'report_store'
+        result = getattr(report, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
 @usercheck(user_type=2)
 def staff_profile_view(request, action, user):
     result = {}
@@ -371,6 +390,28 @@ def staff_peisong_pick_view(request, action, user):
     return response
 
 
+@usercheck(user_type=2)
+def staff_peisong_report_view(request, action, user, month=None):
+    result = {}
+
+    body = json.loads(request.body)
+
+    if month is not None:
+        body['month'] = month
+
+    peisong = PeiSongManager(user=user, postdata=body)
+
+    try:
+        method_name = action + '_report_peisong'
+        result = getattr(peisong, method_name)
+    except Exception as e:
+        return parse_info({'message': str(e)})
+
+    response = parse_info(result())
+
+    return response
+
+
 @usercheck(user_type=1)
 def staff_kuguan_pick_view(request, action, user):
     result = {}
@@ -390,11 +431,23 @@ def staff_kuguan_pick_view(request, action, user):
     return response
 
 
-@usercheck(user_type=1):
+@usercheck(user_type=1)
 def staff_kuguan_goods_view(request, action, user):
     result = {}
     body = json.loads(request.body)
-    
+
+    goods = GoodsManager(postdata=body)
+    try:
+        method_name = action + '_goods'
+        result = getattr(goods, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
 
 
 def test_test_view(request):

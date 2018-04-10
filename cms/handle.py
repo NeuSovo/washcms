@@ -423,9 +423,10 @@ class AreaManager(object):
 class StoreManager(object):
     """docstring for StoreManager"""
 
-    def __init__(self, action, postdata):
+    def __init__(self, postdata, action=None, user=None):
         self.action = action
         self.data = postdata
+        self.user = user
 
     @staticmethod
     def check_id_exist(store_id):
@@ -558,6 +559,36 @@ class StoreManager(object):
                 this_goods.save()
 
         return {'message': 'ok'}
+
+    def report_store(self):
+        user_store = UserManager.get_user_store(self.user).store
+        
+        today = datetime.now()
+        month = self.data.get('month', today.month)
+        if month <= 0 or month > 12:
+            month = today.month
+        
+        money_sum = no_done_sum = no_pay_sum = 0
+        
+        order_pool = Order.objects.filter(store=user_store, create_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(store=user_store, create_time__month=month)
+        
+        for i in order_pool.iterator():
+            money_sum += i.order_total_price
+            if i.order_type != 0:
+                no_done_sum += 1
+                no_pay_sum += i.order_total_price
+
+        info = {
+            'month': month,
+            'order_sum': len(order_pool),
+            'recover_sum': len(recover_order_pool),
+            'money_sum': money_sum,
+            'no_done_sum': no_done_sum,
+            'no_pay_sum': no_pay_sum
+        }
+
+        return {'message': 'ok', 'info': info}
 
     @staticmethod
     def all_store():
@@ -751,7 +782,7 @@ class GoodsManager(object):
 
                     car_goods.save()
                 except Exception as e:
-                    if new:      
+                    if new:
                         car_goods = PeisongCarStock(
                             wk=order.pick_user, goods=i.goods, goods_stock=i.goods_count)
                         car_goods.save()
@@ -779,7 +810,7 @@ class GoodsManager(object):
 
         return {'message': 'ok', 'id': new_goods.goods_id}
 
-    def add_stock(self):
+    def addstock_goods(self):
         try:
             goods_id = int(self.data.get('goods_id', 0))
             count = int(self.data.get('count', 0))
@@ -787,9 +818,9 @@ class GoodsManager(object):
         except Exception:
             return {'message': 'goods_id not exist'}
 
-        goods.stock += count
+        goods.goods_stock += count
         goods.save()
-        return {'message': 'ok', 'new_stock': goods.stock}
+        return {'message': 'ok', 'new_stock': goods.goods_stock}
 
     def del_goods(self):
         goods_id = int(self.data['goods_id'])
@@ -1098,6 +1129,61 @@ class PeiSongManager(object):
 
         return {'message': 'ok'}
 
+    def report_info(self, order_pool, recover_order_pool):
+
+        pay_order_sum = no_pay_order_sum = month_pay_order_sum = 0
+        pay_money_sum = xs_pay_sum = xx_pay_sum = 0
+
+        for i in order_pool.iterator():
+            if i.order_type == 0:
+                pay_order_sum += 1
+                pay_money_sum += i.order_total_price
+                if i.pay_from == 0:
+                    xx_pay_sum += i.order_total_price
+                else:
+                    xs_pay_sum += i.order_total_price
+            else:
+                no_pay_order_sum += 1
+                if i.pay_type == 1:
+                    month_pay_order_sum += 1
+
+        info = {
+            'order_sum': len(order_pool),
+            'recover_sum': len(recover_order_pool),
+            'pay_order_sum': pay_order_sum,
+            'no_pay_order_sum': no_pay_order_sum,
+            'month_pay_order_sum': month_pay_order_sum,
+            'pay_money_sum': pay_money_sum,
+            'xs_pay_sum': xs_pay_sum,
+            'xx_pay_sum': xx_pay_sum
+        }
+
+        return info
+
+    def today_report_peisong(self):
+        today = datetime.now()
+
+        order_pool = Order.objects.filter(order_type__lt=3, ps_user=self.ps_user,receive_time__month=today.month , receive_time__day=today.day)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1, ps_user=self.ps_user,receive_time__month=today.month , receive_time__day=today.day)
+
+        info = self.report_info(order_pool, recover_order_pool)
+        return {'message': 'ok',
+                'info': info}
+
+    def month_report_peisong(self):
+        today = datetime.now()
+        month = self.data.get('month', today.month)
+        
+        if month <= 0 or month > 12:
+            month = today.month
+
+        order_pool = Order.objects.filter(order_type__lt=3, ps_user=self.ps_user,receive_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1, ps_user=self.ps_user,receive_time__month=month)
+
+        info = self.report_info(order_pool, recover_order_pool)
+        return {'message': 'ok',
+                'info': info}
+
     def get_pay_peisong(self):
         result = {}
         info = []
@@ -1208,8 +1294,9 @@ class PeiSongManager(object):
         info = save_pick_detail(order_id, self.data['goods_list'])
         if info['message'] != 'ok':
             return info
-        order_type = self.data.get('order_type',0)
-        PickOrder(order_id=order_id, pick_user=pick_user, order_type=order_type).save()
+        order_type = self.data.get('order_type', 0)
+        PickOrder(order_id=order_id, pick_user=pick_user,
+                  order_type=order_type).save()
         info['order_id'] = order_id
 
         return info

@@ -9,7 +9,7 @@ class APIServerErrorCode(object):
     ERROR_PARAME          = 9999
     WRONG_PARAME          = 9998
 
-    #auth
+    # auth
     REG_SUCCESS           = 1000
     ALERADY_REG           = 1001
     FLUSH_SESSION_SUCCESS = 1002
@@ -18,9 +18,9 @@ class APIServerErrorCode(object):
     CHECK_USER_FAILED     = 1005
     LOGIN_SUCCESS         = 1006
 
-    #order
+    # order
 
-    #push
+    # push
 
     #
     @staticmethod
