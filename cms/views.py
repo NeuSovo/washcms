@@ -1,17 +1,14 @@
 # -*- coding: utf-8 -*-
-import json
-import qrcode
-
 from django.http import JsonResponse
-from django.utils.six import BytesIO
 from django.shortcuts import HttpResponse
 
 from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
-                        usercheck, EmployeeManager, CustomerUserManager, GoodsManager,
-                        OrderManager, PeiSongManager, KuGuanManager, RecoverManager,
-                        BoosReport, ClearAccount)
+                        EmployeeManager, CustomerUserManager, GoodsManager, OrderManager,
+                        PeiSongManager, KuGuanManager, RecoverManager, BoosReport,
+                        ClearAccount)
 from cms.apps import APIServerErrorCode as ASEC
-
+from cms.tools import gen_qrcode
+from cms.auth import usercheck
 
 def parse_info(data):
     """
@@ -35,13 +32,8 @@ def index(request):
 
 
 def qrcode_view(request, data):
-    img = qrcode.make(data)
-
-    buf = BytesIO()
-    img.save(buf)
-    image_stream = buf.getvalue()
-
-    response = HttpResponse(image_stream, content_type="image/png")
+    img = gen_qrcode(data)
+    response = HttpResponse(img, content_type="image/png")
 
     return response
 
@@ -64,7 +56,7 @@ def register_view(request):
     # update 2018/03/07
     # request.GET['name'],request.GET['url'])
     wk = WechatSdk(request.GET['code'])
-    if not wk.get_openid():
+    if not wk.check():
         result['code'] = ASEC.WRONG_PARAME
         result['message'] = ASEC.getMessage(ASEC.WRONG_PARAME)
         response = parse_info(result)
@@ -94,7 +86,7 @@ def re_register_view(request):
 
 
 @usercheck()
-def login_view(request, user):
+def login_view(request, user, body):
     """
     view for login
     Accept User Cookies and return user info,
@@ -112,7 +104,6 @@ def login_view(request, user):
         ip = request.META['REMOTE_ADDR']
         print(ip)
     result = {}
-    body = json.loads(request.body)
     login = LoginManager(user=user)
 
     if login.check(sign=body['sign'],
@@ -130,25 +121,18 @@ def login_view(request, user):
 
 
 @usercheck(user_type=0)
-def change_deliveryarea_view(request, user):
-    body = json.loads(request.body)
-
+def change_deliveryarea_view(request, user, body):
     action = request.GET.get('action', 'all')
-
     result = AreaManager(action=action, postdata=body)
-
+    
     response = parse_info(result.reply())
 
     return response
 
 
 @usercheck(user_type=0)
-def change_store_view(request, user):
-
-    body = json.loads(request.body)
-
+def change_store_view(request, user, body):
     action = request.GET.get('action', 'all')
-
     result = StoreManager(action=action, postdata=body)
 
     response = parse_info(result.reply())
@@ -157,22 +141,17 @@ def change_store_view(request, user):
 
 
 @usercheck(user_type=0)
-def change_employee_view(request, user):
-
-    body = json.loads(request.body)
-
+def change_employee_view(request, user, body):
     action = request.GET.get('action', 'all')
-
     result = EmployeeManager(action=action, postdata=body)
+
     response = parse_info(result.reply())
 
     return response
 
 
 @usercheck(user_type=0)
-def boos_report_order_view(request, user, action=None, day=None, month=None):
-    body = json.loads(request.body)
-
+def boos_report_order_view(request, user, body, action=None, day=None, month=None):
     if day is not None:
         body['day'] = day
         action = 'day'
@@ -197,9 +176,7 @@ def boos_report_order_view(request, user, action=None, day=None, month=None):
 
 
 @usercheck(user_type=0)
-def clear_account_view(request, action=None, user=None):
-    body = json.loads(request.body)
-
+def clear_account_view(request, body, action=None, user=None):
     clear = ClearAccount(postdata=body)
     try:
         method_name = action + '_clear'
@@ -214,23 +191,18 @@ def clear_account_view(request, action=None, user=None):
     return response
 
 
-
 @usercheck(user_type=1)
-def change_goods_view(request, user):
-    body = json.loads(request.body)
-
+def change_goods_view(request, user, body):
     action = request.GET.get('action', 'all')
-
     result = GoodsManager(action=action, postdata=body)
+
     response = parse_info(result.reply())
 
     return response
 
 
 @usercheck(user_type=4)
-def bind_user_view(request, user):
-    body = json.loads(request.body)
-
+def bind_user_view(request, user, body):
     result = CustomerUserManager(postdata=body, user=user)
     response = parse_info(result.reply())
 
@@ -238,43 +210,36 @@ def bind_user_view(request, user):
 
 
 @usercheck(user_type=3)
-def get_user_goods_view(request, user):
+def get_user_goods_view(request, user, body):
     result = {}
-
-    body = json.loads(request.body)
-
     user_store = UserManager.get_user_store(user).store
     result['message'] = 'ok'
     goods_list = user_store.price()
-
     result['goods_list'] = goods_list
+
     response = parse_info(result)
 
     return response
 
 
 @usercheck(user_type=3)
-def order_view(request, user):
-    body = json.loads(request.body)
-
+def order_view(request, user, body):
     action = request.GET.get('action', 'all')
-
     result = OrderManager(action=action, postdata=body, user=user)
+
     response = parse_info(result.reply())
 
     return response
 
 
 @usercheck(user_type=3)
-def change_profile_view(request, user):
+def change_profile_view(request, user, body):
     result = {}
-    body = json.loads(request.body)
     user_store = UserManager.get_user_store(user).store
 
     action = request.GET.get('action', 'get')
 
     if action == 'get':
-        print(action)
         store_info = user_store.info()
 
         if 'message' in store_info:
@@ -294,9 +259,7 @@ def change_profile_view(request, user):
 
 
 @usercheck(user_type=3)
-def order_2_view(request, user, action=None, status=None):
-    body = json.loads(request.body)
-
+def order_2_view(request, user, body, action=None, status=None):
     if action == 'status':
         body['status'] = status
 
@@ -307,8 +270,7 @@ def order_2_view(request, user, action=None, status=None):
 
 
 @usercheck(user_type=3)
-def recover_view(request, user, action=None):
-    body = json.loads(request.body)
+def recover_view(request, user, body, action=None):
     recover = RecoverManager(user=user, **body)
 
     try:
@@ -325,8 +287,7 @@ def recover_view(request, user, action=None):
 
 
 @usercheck(user_type=3)
-def user_report_view(request, user, month=None):
-    body = json.loads(request.body)
+def user_report_view(request, user, body, month=None):
     if month is not None:
         body['month'] = month
     report = StoreManager(user=user, postdata=body)
@@ -345,10 +306,8 @@ def user_report_view(request, user, month=None):
 
 
 @usercheck(user_type=2)
-def staff_profile_view(request, action, user):
+def staff_profile_view(request, action, user, body):
     result = {}
-    body = json.loads(request.body)
-
     result['message'] = 'failed'
 
     if action == 'set':
@@ -367,11 +326,8 @@ def staff_profile_view(request, action, user):
 
 
 @usercheck(user_type=2)
-def staff_goods_view(request, action, user):
+def staff_goods_view(request, action, user, body):
     result = {}
-
-    body = json.loads(request.body)
-
     if action == 'all':
         result = GoodsManager.all_goods()
 
@@ -381,10 +337,8 @@ def staff_goods_view(request, action, user):
 
 
 @usercheck(user_type=2)
-def staff_peisong_order_view(request, status, action, user):
+def staff_peisong_order_view(request, status, action, user, body):
     result = {}
-
-    body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
 
     try:
@@ -399,10 +353,8 @@ def staff_peisong_order_view(request, status, action, user):
 
 
 @usercheck(user_type=2)
-def staff_peisong_stock_view(request, action, user):
+def staff_peisong_stock_view(request, action, user, body):
     result = {}
-
-    body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
 
     try:
@@ -417,11 +369,10 @@ def staff_peisong_stock_view(request, action, user):
 
 
 @usercheck(user_type=2)
-def staff_peisong_pick_view(request, action, user):
+def staff_peisong_pick_view(request, action, user, body):
     result = {}
-
-    body = json.loads(request.body)
     peisong = PeiSongManager(user=user, postdata=body)
+
     try:
         method_name = action + '_pick'
         result = getattr(peisong, method_name)
@@ -434,11 +385,8 @@ def staff_peisong_pick_view(request, action, user):
 
 
 @usercheck(user_type=2)
-def staff_peisong_report_view(request, user, action=None, month=None, day=None):
+def staff_peisong_report_view(request, user, body, action=None, month=None, day=None):
     result = {}
-
-    body = json.loads(request.body)
-
     if month is not None:
         body['month'] = month
         action = 'month'
@@ -461,10 +409,8 @@ def staff_peisong_report_view(request, user, action=None, month=None, day=None):
 
 
 @usercheck(user_type=1)
-def staff_kuguan_pick_view(request, action, user):
+def staff_kuguan_pick_view(request, action, user, body):
     result = {}
-
-    body = json.loads(request.body)
     peisong = KuGuanManager(user=user, postdata=body)
     try:
         method_name = action + '_pick'
@@ -480,11 +426,10 @@ def staff_kuguan_pick_view(request, action, user):
 
 
 @usercheck(user_type=1)
-def staff_kuguan_goods_view(request, action, user):
+def staff_kuguan_goods_view(request, action, user, body):
     result = {}
-    body = json.loads(request.body)
-
     goods = GoodsManager(postdata=body)
+
     try:
         method_name = action + '_goods'
         result = getattr(goods, method_name)

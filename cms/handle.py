@@ -1,90 +1,24 @@
 # -*- coding: utf-8 -*-
 import os
-import json
 import time
 import redis
-import base64
 import random
 import logging
-import requests
-from hashlib import sha256, md5
+
 from datetime import datetime, timedelta
 
+from cms.tools import *
+from cms.models import *
 from django.db.models import Q
 from django.conf import settings
-from django.http import JsonResponse
-from cms.models import *
+# from cms.views import *
 from cms.apps import APIServerErrorCode as ASEC
 
-# from cms.views import *
-
 app = logging.getLogger('app.custom')
-request_backup = logging.getLogger('app.backup')
 r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
 
-def parse_info(data):
-    """
-    parser_info:
-    param must be a dict
-    parse dict data to json,and return HttpResponse
-    """
-    return JsonResponse(data)
-
-
-def usercheck(user_type=-1):
-    def wrapper(func):
-        def inner_wrapper(*args, **kwargs):
-            result = {}
-            request = args[0]
-
-            action = request.GET.get('action', None) or kwargs.get(
-                'action', None) or 'None'
-
-            try:
-                body = json.loads(request.body)
-                wckey = body['base_req']['wckey']
-            except:
-                result['code'] = ASEC.ERROR_PARAME
-                result['message'] = ASEC.getMessage(ASEC.ERROR_PARAME)
-                response = parse_info(result)
-                response.status_code = 400
-
-                return response
-
-            try:
-                user_key = Session.objects.get(session_data=wckey)
-            except Exception:
-                result['code'] = ASEC.SESSION_NOT_WORK
-                result['message'] = ASEC.getMessage(ASEC.SESSION_NOT_WORK)
-
-                return parse_info(result)
-
-            if user_key.expire_date < datetime.now():
-                result['code'] = ASEC.SESSION_EXPIRED
-                result['message'] = ASEC.getMessage(ASEC.SESSION_EXPIRED)
-
-                return parse_info(result)
-
-            user = UserManager.get_user(wckey=wckey)
-
-            app.info("[{}][{}][{}][{}]".format(
-                func.__name__, user.wk, action, user.user_type))
-
-            request_backup.info(str(body))
-
-            if user_type == -1 or user.user_type <= user_type:
-                return func(*args, **kwargs, user=user)
-            else:
-                return parse_info({'message': 'user_type failed'})
-
-        return inner_wrapper
-
-    return wrapper
-
-
 class WechatSdk(object):
-    __Appid = 'wx5c7d55175f3872b7'
-    __SECRET = '6050b3ca9c9b3823768ae1867ef9036e'
+
     """
     WechatSdk
     Based on Wechat user code
@@ -96,49 +30,14 @@ class WechatSdk(object):
         super(WechatSdk, self).__init__()
         self.code = code
 
-    @staticmethod
-    def gen_hash():
-        """
-        gen_hash as session data.
-        The repetition should be a very small probability event,
-        and from a statistical point of view, the probability is zero.
-        Return a string of length 64.
-        """
-        return sha256(os.urandom(24)).hexdigest()
-
-    def get_openid(self):
-        params = {
-            'appid': self.__Appid,
-            'secret': self.__SECRET,
-            'js_code': self.code,
-            'grant_type': 'authorization_code'
-        }
-
-        try:
-            data = requests.get(
-                'https://api.weixin.qq.com/sns/jscode2session', params=params)
-        except Exception as e:
-            app.error(str(e))
+    def check(self):
+        res = get_openid(self.code)
+        if res:
+            self.openid = res['openid']
+            self.wxsskey = res['session_key']
+            return True
+        else:
             return False
-
-        info = data.json()
-        # print(info)
-        if 'openid' not in info:
-            app.info('parameter \'{}\' error'.format(self.code))
-            if settings.DEBUG:
-                info = {
-                    'openid': self.code,
-                    'session_key': 'SESSIONKEY',
-                }
-            else:
-                return False
-
-        self.openid = info['openid']
-        self.wxsskey = info['session_key']
-
-        app.info(self.code + ':\t' + self.openid)
-
-        return True
 
     def save_user(self):
         have_user = User.objects.filter(wk=self.openid)
@@ -146,7 +45,7 @@ class WechatSdk(object):
             # 已注册过
             return self.flush_session()
 
-        sess = WechatSdk.gen_hash()
+        sess = gen_hash()
 
         Session(session_key=self.openid,
                 session_data=sess,
@@ -169,7 +68,7 @@ class WechatSdk(object):
         except Exception as e:
             this_user = Session()
 
-        sess = WechatSdk.gen_hash()
+        sess = gen_hash()
 
         this_user.we_ss_key = self.wxsskey
         this_user.session_data = sess
@@ -196,23 +95,12 @@ class LoginManager(object):
         if time.time() - int(checktime) > 5:
             return False
 
-        to_check_str = str(self.TOKEN) + str(checktime)
-        to_check_str = to_check_str.encode('utf-8')
+        check_str = en_md5(str(self.TOKEN) + str(checktime))
 
-        m = md5()
-        m.update(to_check_str)
-
-        cc_str = m.hexdigest()
-        del m
         if settings.DEBUG:
             return True
         else:
-            return cc_str == sign
-
-    @staticmethod
-    def gen_base64(txt):
-        tmp = base64.b64encode(str(txt).encode('utf-8'))
-        return str(tmp, 'utf-8')
+            return check_str == sign
 
     def reply(self):
         user = self.user
@@ -259,7 +147,7 @@ class UserManager(object):
         return {'name': name,
                 'avatar_links': avatar_links,
                 'user_type': user.user_type,
-                'qrcode': LoginManager.gen_base64(user.wk)}
+                'qrcode': en_base64(user.wk)}
 
     @staticmethod
     def get_user_store(user):
@@ -690,8 +578,7 @@ class EmployeeManager(object):
             area = None
 
         try:
-            uid = base64.b64decode(uid.encode('utf-8'))
-            uid = str(uid, 'utf-8')
+            uid = de_base64(txt=uid)
         except Exception as e:
             app.info(str(e))
             return {'message': 'failed'}
