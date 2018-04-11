@@ -62,9 +62,6 @@ class User(models.Model):
     def __len__(self):
         return len(User.user_all())
 
-    def __str__(self):
-        return '%s : %s' % (self.nick_name, self.type_level[self.user_type])
-
 
 class DeliveryArea(models.Model):
 
@@ -195,7 +192,7 @@ class PeisongProfile(models.Model):
         )
 
     def __str__(self):
-        return '{},{}'.format(self.name,self.area_id)
+        return '{}'.format(self.wk.wk)
 
 
 class Goods(models.Model):
@@ -446,6 +443,7 @@ class PickOrder(models.Model):
             'create_time': str(self.create_time),
             'order_type': self.order_type,
             'order_status': self.order_status,
+            'pick_user': self.pick_user.name,
             'confirm_time': str(self.confirm_time),
             'is_modify': self.is_modify
         }

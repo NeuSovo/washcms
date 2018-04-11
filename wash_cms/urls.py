@@ -38,7 +38,13 @@ urlpatterns = [
     path('boss/report/order/<str:action>', boos_report_order_view),
     path('boss/report/order/day/<int:day>', boos_report_order_view),
     path('boss/report/order/month/<int:month>', boos_report_order_view),
-    # path('boss/report/peisong/month/<int:month>', boos_report_order_view),
+
+    path('boss/report/stock/<str:action>', boos_report_stock_view),
+    path('boss/report/stock/day/<int:day>', boos_report_stock_view),
+    path('boss/report/stock/month/<int:month>', boos_report_stock_view),
+
+    path('boss/report/store/month', boos_report_store_view),
+    path('boss/report/store/month/<int:month>', boos_report_store_view),
 
     path('user/bind', bind_user_view),
     path('user/order', order_view),

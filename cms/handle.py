@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 import os
-import time
-import redis
 import random
 import logging
 
@@ -9,249 +7,14 @@ from datetime import datetime, timedelta
 
 from cms.tools import *
 from cms.models import *
+
 from django.db.models import Q
 from django.conf import settings
-# from cms.views import *
+
 from cms.apps import APIServerErrorCode as ASEC
+from cms.auth import UserManager, LoginManager, WechatSdk
 
 app = logging.getLogger('app.custom')
-r = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
-
-class WechatSdk(object):
-
-    """
-    WechatSdk
-    Based on Wechat user code
-    """
-    openid = ''
-    wxsskey = ''
-
-    def __init__(self, code):
-        super(WechatSdk, self).__init__()
-        self.code = code
-
-    def check(self):
-        res = get_openid(self.code)
-        if res:
-            self.openid = res['openid']
-            self.wxsskey = res['session_key']
-            return True
-        else:
-            return False
-
-    def save_user(self):
-        have_user = User.objects.filter(wk=self.openid)
-        if have_user.exists():
-            # 已注册过
-            return self.flush_session()
-
-        sess = gen_hash()
-
-        Session(session_key=self.openid,
-                session_data=sess,
-                we_ss_key=self.wxsskey,
-                expire_date=datetime.now() + timedelta(30)).save()
-
-        user = User(wk=self.openid)
-        user.save()
-        # 自动为用户生成Profile
-        # Profile(wk=user).save()
-
-        # 注册成功，分配cookie
-        return {'sess': sess,
-                'code': ASEC.REG_SUCCESS,
-                'message': ASEC.getMessage(ASEC.REG_SUCCESS)}
-
-    def flush_session(self):
-        try:
-            this_user = Session.objects.get(session_key=self.openid)
-        except Exception as e:
-            this_user = Session()
-
-        sess = gen_hash()
-
-        this_user.we_ss_key = self.wxsskey
-        this_user.session_data = sess
-        this_user.expire_date = datetime.now() + timedelta(days=3)
-        this_user.save()
-
-        # 刷新Cookie成功
-        return {'sess': sess,
-                'code': ASEC.FLUSH_SESSION_SUCCESS,
-                'message': ASEC.getMessage(ASEC.FLUSH_SESSION_SUCCESS)}
-
-
-class LoginManager(object):
-    TOKEN = 'eq021n!3'
-
-    def __init__(self, user):
-        super(LoginManager, self).__init__()
-        self.user = user
-
-    def __str__(self):
-        return self.user
-
-    def check(self, sign, checktime):
-        if time.time() - int(checktime) > 5:
-            return False
-
-        check_str = en_md5(str(self.TOKEN) + str(checktime))
-
-        if settings.DEBUG:
-            return True
-        else:
-            return check_str == sign
-
-    def reply(self):
-        user = self.user
-        user.last_login = datetime.now()
-        user_info = UserManager.get_user_info(user)
-
-        if not settings.DEBUG:
-            user_info['qrcode'] = 'https://wash.wakefulness.cn/tools/qrcode/' + \
-                                  user_info['qrcode']
-        user.save()
-
-        return {'code': ASEC.LOGIN_SUCCESS,
-                'user_type': user.user_type,
-                'info': user_info,
-                'message': ASEC.getMessage(ASEC.LOGIN_SUCCESS)}
-
-
-class UserManager(object):
-
-    @staticmethod
-    def get_user(wckey=None):
-        """
-        :param wckey:
-        :return: user
-        """
-        if None:
-            return None
-
-        user_key = Session.objects.get(session_data=wckey)
-        user = User.objects.get(wk=user_key.session_key)
-
-        return user
-
-    @staticmethod
-    def get_user_info(user):
-        """
-        :param user:
-        :return: name,avatar_links
-                and base64(user.wk)
-        """
-        name = user.nick_name
-        avatar_links = user.avatar_links
-
-        return {'name': name,
-                'avatar_links': avatar_links,
-                'user_type': user.user_type,
-                'qrcode': en_base64(user.wk)}
-
-    @staticmethod
-    def get_user_store(user):
-        """
-        User_type must be 3
-        :param user:
-        :return: Customer User store id
-        """
-        return CustomerProfile.objects.get(wk=user)
-
-    @staticmethod
-    def get_user_area(user):
-        """
-        User_type must be 2
-        :param user:
-        :return: Courier User Area id
-        """
-        return PeisongProfile.objects.get(wk=user)
-
-    @staticmethod
-    def set_user_profile(user, profile):
-        """
-        :param user:
-        :param profile:
-        :return:
-        """
-        user.nick_name = profile['name']
-        user.avatar_links = profile['url']
-        user.save()
-
-        return user
-
-    @staticmethod
-    def set_user_store_profile(user, profile):
-        """
-        only user type is 3
-        """
-        store = UserManager.get_user_store(user).store
-
-        store.store_addr = profile['addr']
-        store.store_phone = int(profile['phone'])
-        store.store_name = profile['name']
-        store.save()
-
-        return store
-
-    @staticmethod
-    def get_user_store_profile(user):
-        """
-        only user type is 3
-        """
-        profile = {}
-        store = UserManager.get_user_store(user).store
-
-        profile['addr'] = store.store_addr
-        profile['phone'] = store.store_phone
-        profile['name'] = store.store_name
-
-        return profile
-
-    @staticmethod
-    def set_user_peisong_profile(user, profile):
-        try:
-            phone = int(profile['phone'])
-        except Exception as e:
-            app.info(str(e))
-            return
-
-        peisong = PeisongProfile.objects.get(wk=user)
-        peisong.name = profile['name']
-        peisong.phone = phone
-        peisong.save()
-
-        return peisong
-
-    @staticmethod
-    def get_user_peisong_profile(user):
-        peisong = PeisongProfile.objects.get(wk=user)
-        return {'area_id': peisong.area.id,
-                'area_name': peisong.area.area_name,
-                'name': peisong.name,
-                'phone': peisong.phone}
-
-    @staticmethod
-    def set_user_type(user, set_type, area=None):
-        """
-        set_type = 0,1,2PeisongProfile
-        """
-        if set_type == 2:
-            PeisongProfile(wk=user, area=area).save()
-
-        if set_type == 4:
-            if user.user_type == 2:
-                to_delete = PeisongProfile.objects.get(wk=user)
-                for i in PickOrder.objects.filter(pick_user=PeisongProfile.objects.get(wk=user)):
-                    PickOrderDetail.objects.filter(
-                        order_id=i.order_id).delete()
-                    i.delete()
-                to_delete.delete()
-
-        user.user_type = set_type
-        user.save()
-
-        return user
 
 
 class AreaManager(object):
@@ -449,20 +212,9 @@ class StoreManager(object):
 
         return {'message': 'ok'}
 
-    def report_store(self):
-        user_store = UserManager.get_user_store(self.user).store
-
-        today = datetime.now()
-        month = self.data.get('month', today.month)
-        if month <= 0 or month > 12:
-            month = today.month
-
+    @staticmethod
+    def store_report_info(order_pool, recover_order_pool):
         money_sum = no_done_sum = no_pay_sum = 0
-
-        order_pool = Order.objects.filter(
-            store=user_store, create_time__month=month)
-        recover_order_pool = RecoverOrder.objects.filter(
-            store=user_store, create_time__month=month)
 
         for i in order_pool.iterator():
             money_sum += i.order_total_price
@@ -471,19 +223,49 @@ class StoreManager(object):
                 no_pay_sum += i.order_total_price
 
         info = {
-            'month': month,
             'order_sum': len(order_pool),
             'recover_sum': len(recover_order_pool),
-            'money_sum': money_sum,
+            'money_sum': str(money_sum),
             'no_done_sum': no_done_sum,
-            'no_pay_sum': no_pay_sum
+            'no_pay_sum': str(no_pay_sum)
         }
 
-        return {'message': 'ok', 'info': info}
+        return info
+
+    def month_store_report(self):
+        user_store = UserManager.get_user_store(self.user).store
+
+        today = datetime.now()
+        month = self.data.get('month', today.month)
+        if month <= 0 or month > 12:
+            month = today.month
+
+        key = str(user_store.store_id) + '_' + \
+            str(month) + '_month_store_report'
+        # Redis
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
+
+        order_pool = Order.objects.filter(order_type__lt=2,
+                                          store=user_store, receive_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                         store=user_store, receive_time__month=month)
+
+        info = StoreManager.store_report_info(
+            order_pool=order_pool, recover_order_pool=recover_order_pool)
+        result = {'message': 'ok', 'info': info}
+
+        if info['order_sum'] != 0:
+            print('new_redis')
+            redis_report.set(key, result, ex=600)
+
+        return result
 
     @staticmethod
     def get_last_pay_time(store):
-        order = Order.objects.filter(store=store, order_type=1).order_by('receive_time')[:1]
+        order = Order.objects.filter(
+            store=store, order_type=1).order_by('receive_time')[:1]
         for i in order:
             return i.create_time.strftime("%Y-%m-%d")
 
@@ -784,8 +566,9 @@ class OrderManager(object):
 
     def getclear_order(self):
         store = UserManager.get_user_store(self.user).store
-        if r.exists(store.store_id):
-            return eval(r.get(store.store_id))
+        if redis_report.exists(store.store_id):
+            print ('_redis')
+            return eval(redis_report.get(store.store_id))
 
         return {'message': 'None'}
 
@@ -921,7 +704,7 @@ class OrderManager(object):
             return {'message': 'failed'}
 
         order_list = Order.objects.filter(
-            store=store, order_type=status)
+            store=store, order_type=status)[:30]
 
         for i in order_list:
             status_order.append(
@@ -1033,7 +816,7 @@ class PeiSongManager(object):
         return {'message': 'ok'}
 
     @staticmethod
-    def report_info(order_pool, recover_order_pool):
+    def order_report_info(order_pool, recover_order_pool):
 
         pay_order_sum = no_pay_order_sum = month_pay_order_sum = 0
         pay_money_sum = xs_pay_sum = xx_pay_sum = 0
@@ -1057,16 +840,56 @@ class PeiSongManager(object):
             'pay_order_sum': pay_order_sum,
             'no_pay_order_sum': no_pay_order_sum,
             'month_pay_order_sum': month_pay_order_sum,
-            'pay_money_sum': pay_money_sum,
-            'xs_pay_sum': xs_pay_sum,
-            'xx_pay_sum': xx_pay_sum
+            'pay_money_sum': str(pay_money_sum),
+            'xs_pay_sum': str(xs_pay_sum),
+            'xx_pay_sum': str(xx_pay_sum)
         }
 
         return info
 
-    def day_report_peisong(self):
+    @staticmethod
+    def stock_report_info(pick_pool):
+        pick_order_sum = 0
+        recover_order_sum = 0
+        goods_sum = []
+        goods_sum_tmp = {}
+        order_info = []
+
+        for i in pick_pool.iterator():
+            goods_info = i.goods_info()
+            recover_order_sum += i.order_type
+            for j in goods_info:
+                try:
+                    goods_sum_tmp[j['goods_id']] += j['goods_count']
+                except Exception:
+                    goods_sum_tmp[j['goods_id']] = j.pop('goods_count')
+
+            order_info.append({'info': i.info(), 'goods_info': goods_info})
+
+        for i in goods_sum_tmp:
+            goods = Goods.objects.get(goods_id=i)
+            goods_sum.append({'goods_id': i,
+                              'goods_name': goods.goods_name,
+                              'goods_spec': goods.goods_spec,
+                              'goods_count': goods_sum_tmp[i]})
+        info = {
+            'message': 'ok',
+            'pick_order_sum': len(pick_pool)-recover_order_sum,
+            'recover_order_sum': recover_order_sum,
+            'goods_sum': goods_sum,
+            'order_info': order_info,
+        }
+
+        return info
+
+    def day_order_report(self):
         today = datetime.now()
         day = self.data.get('day', today.day)
+
+        key = str(self.ps_user) + '_'  + str(day) + '_day_order_report'
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
 
         order_pool = Order.objects.filter(Q(order_type__lt=2),
                                           Q(ps_user=self.ps_user),
@@ -1077,16 +900,28 @@ class PeiSongManager(object):
                                                          receive_time__month=today.month,
                                                          receive_time__day=day)
 
-        info = PeiSongManager.report_info(order_pool, recover_order_pool)
-        return {'message': 'ok',
-                'info': info}
+        info = PeiSongManager.order_report_info(order_pool, recover_order_pool)
 
-    def month_report_peisong(self):
+        result = {'message': 'ok',
+                  'info': info}
+        if info['order_sum'] != 0:
+            print('new_redis')
+            redis_report.set(key, result, ex=600)
+
+        return result
+
+    def month_order_report(self):
         today = datetime.now()
         month = self.data.get('month', today.month)
 
         if month <= 0 or month > 12:
             month = today.month
+
+        # 如果存在redis缓存 直接返回
+        key = str(self.ps_user) + '_' + str(month) + '_month_order_report'
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
 
         order_pool = Order.objects.filter(order_type__lt=3,
                                           ps_user=self.ps_user,
@@ -1095,9 +930,15 @@ class PeiSongManager(object):
                                                          ps_user=self.ps_user,
                                                          receive_time__month=month)
 
-        info = PeiSongManager.report_info(order_pool, recover_order_pool)
-        return {'message': 'ok',
-                'info': info}
+        info = PeiSongManager.order_report_info(order_pool, recover_order_pool)
+        result = {'message': 'ok',
+                  'info': info}
+
+        if info['order_sum'] != 0:
+            print('new_redis')
+            redis_report.set(key, result, ex=600)
+
+        return result
 
     def get_pay_peisong(self):
         result = {}
@@ -1387,52 +1228,213 @@ class BoosReport(object):
 
     def __init__(self, postdata=None, user=None):
         self.data = postdata
+        self.today = datetime.now()
 
-    def day_report(self):
-        today = datetime.now()
-        day = self.data.get('day', today.day)
+    def day_order_report(self):
+        day = self.data.get('day', self.today.day)
+        ps_user_uid = self.data.get('uid', None)
+        ps_user = None
+        if ps_user_uid:
+            try:
+                ps_user = de_base64(ps_user_uid)
+                ps_user = PeisongProfile.objects.get(wk=ps_user)
+            except Exception:
+                ps_user = None
 
-        order_pool = Order.objects.filter(order_type__lt=3,
-                                          receive_time__month=today.month,
-                                          receive_time__day=day)
-        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
-                                                         receive_time__month=today.month,
-                                                         receive_time__day=day)
+        # Redis
+        key = str(ps_user) + '_' + str(day) + '_day_order_report'
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
 
-        info = PeiSongManager.report_info(order_pool, recover_order_pool)
-        return {'message': 'ok',
-                'info': info}
+        if ps_user:
+            order_pool = Order.objects.filter(Q(order_type__lt=2),
+                                              Q(ps_user=ps_user),
+                                              Q(receive_time__month=self.today.month),
+                                              Q(receive_time__day=day) | Q(done_time__day=day))
+            recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                             ps_user=ps_user,
+                                                             receive_time__month=self.today.month,
+                                                             receive_time__day=day)
+        else:
+            order_pool = Order.objects.filter(Q(order_type__lt=2),
+                                              Q(receive_time__month=self.today.month),
+                                              Q(receive_time__day=day) | Q(done_time__day=day))
+            recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                             receive_time__month=self.today.month,
+                                                             receive_time__day=day)
 
-    def month_report(self):
-        today = datetime.now()
-        month = self.data.get('month', today.month)
+        info = PeiSongManager.order_report_info(order_pool, recover_order_pool)
+        result = {'message': 'ok',
+                  'info': info}
+        if info['order_sum'] != 0:
+            redis_report.set(key, result, ex=600)
+
+        return result
+
+    def month_order_report(self):
+        month = self.data.get('month', self.today.month)
 
         if month <= 0 or month > 12:
             month = today.month
 
-        order_pool = Order.objects.filter(order_type__lt=3,
-                                          receive_time__month=month)
-        recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
-                                                         receive_time__month=month)
+        ps_user_uid = self.data.get('uid', None)
+        ps_user = None
+        if ps_user_uid:
+            try:
+                ps_user = de_base64(ps_user_uid)
+                ps_user = PeisongProfile.objects.get(wk=ps_user)
+            except Exception:
+                ps_user = None
+        # Redis
+        key = str(ps_user) + '_' + str(month) + '_day_order_report'
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
 
-        info = PeiSongManager.report_info(order_pool, recover_order_pool)
-        return {'message': 'ok',
-                'info': info}
+        if ps_user:
+            order_pool = Order.objects.filter(order_type__lt=2,
+                                              ps_user=ps_user,
+                                              receive_time__month=month)
+            recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                             ps_user=ps_user,
+                                                             receive_time__month=month)
+        else:
+            order_pool = Order.objects.filter(order_type__lt=2,
+                                              receive_time__month=month)
+            recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                             receive_time__month=month)
+
+        info = PeiSongManager.order_report_info(order_pool, recover_order_pool)
+        result = {'message': 'ok',
+                  'info': info}
+        if info['order_sum'] != 0:
+            redis_report.set(key, result, ex=600)
+
+        return result
+
+    def day_stock_report(self):
+        day = self.data.get('day', self.today.day)
+        ps_user_uid = self.data.get('uid', None)
+        ps_user = None
+        if ps_user_uid:
+            try:
+                ps_user = de_base64(ps_user_uid)
+                ps_user = PeisongProfile.objects.get(wk=ps_user)
+            except Exception:
+                ps_user = None
+
+        # 如果存在redis缓存 直接返回
+        key = str(ps_user) + '_' + str(day) + '_day_stock_report'
+        if redis_report.exists(key):
+            return eval(redis_report.get(key))
+
+        if ps_user:
+            pick_pool = PickOrder.objects.filter(order_status=0,
+                                                 pick_user=ps_user,
+                                                 confirm_time__month=self.today.month,
+                                                 confirm_time__day=day)
+        else:
+            pick_pool = PickOrder.objects.filter(order_status=0,
+                                                 confirm_time__month=self.today.month,
+                                                 confirm_time__day=day)
+
+        info = PeiSongManager.stock_report_info(pick_pool)
+        if len(info['goods_sum']) != 0:
+            redis_report.set(key, info, ex=600)
+            print('new_redis')
+        return info
+
+    def month_stock_report(self):
+        month = self.data.get('month', self.today.month)
+        if month <= 0 or month > 12:
+            month = today.month
+
+        ps_user_uid = self.data.get('uid', None)
+        ps_user = None
+
+        if ps_user_uid:
+            try:
+                ps_user = de_base64(ps_user_uid)
+                ps_user = PeisongProfile.objects.get(wk=ps_user)
+            except Exception as e:
+                ps_user = None
+
+        # 如果存在redis缓存 直接返回
+        key = str(ps_user) + '_' + str(month) + '_month_stock_report'
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
+
+        if ps_user:
+            pick_pool = PickOrder.objects.filter(order_status=0,
+                                                 pick_user=ps_user,
+                                                 confirm_time__month=month)
+        else:
+            pick_pool = PickOrder.objects.filter(order_status=0,
+                                                 confirm_time__month=month)
+
+        info = PeiSongManager.stock_report_info(pick_pool)
+        if len(info['goods_sum']) != 0:
+            redis_report.set(key, info, ex=600)
+            print('new_redis')
+        return info
+
+    def month_store_report(self):
+        month = self.data.get('month', self.today.month)
+        store_id = self.data.get('store_id', None)
+
+        if month <= 0 or month > 12:
+            month = today.month
+
+        if store_id:
+            try:
+                store = Store.objects.get(store_id=store_id)
+            except Exception as e:
+                store = None
+
+        key = str(store_id) + '_' + str(month) + '_month_store_report'
+        # Redis
+        if redis_report.exists(key):
+            print('_redis')
+            return eval(redis_report.get(key))
+
+        if store:
+            order_pool = Order.objects.filter(order_type__lt=2,
+                                              store=store, receive_time__month=month)
+            recover_order_pool = RecoverOrder.objects.filter(order_type__lt=1,
+                                                             store=store, receive_time__month=month)
+        else:
+            order_pool = Order.objects.filter(
+                order_type__lt=2, create_time__month=month)
+            recover_order_pool = RecoverOrder.objects.filter(
+                order_type__lt=1, create_time__month=month)
+
+        info = StoreManager.store_report_info(
+            order_pool=order_pool, recover_order_pool=recover_order_pool)
+        result = {'message': 'ok', 'info': info}
+
+        if info['order_sum'] != 0:
+            print('new_redis')
+            redis_report.set(key, result, ex=600)
+
+        return result
 
 
 class ClearAccount(object):
     """docstring for ClearAccount"""
+
     def __init__(self, postdata=None, key=None):
         self.key = key
         self.data = postdata
-        
+
     def getmonth_clear(self):
         info = []
         store_pool = Store.objects.filter(store_pay_type=1)
         for i in store_pool:
             info.append({'stroe_id': i.store_id,
                          'store_name': i.store_name,
-                         'is_clear': r.exists(i.store_id),
+                         'is_clear': redis_report.exists(i.store_id),
                          'last_pay_time': StoreManager.get_last_pay_time(i)})
 
         return {'message': 'ok',
@@ -1449,38 +1451,38 @@ class ClearAccount(object):
             b_time = datetime.strptime(self.data.get('b_time'), '%Y-%m-%d')
             e_time = datetime.strptime(self.data.get('e_time'), '%Y-%m-%d')
         except Exception:
-            if r.get(store_id):
-                return eval(r.get(store_id))
+            if redis_report.get(store_id):
+                print ('_redis')
+                return eval(redis_report.get(store_id))
             else:
                 return {'message': 'time error'}
 
-        order_pool = Order.objects.filter(Q(order_type=1,create_time__gte=b_time, create_time__lt=e_time))
+        order_pool = Order.objects.filter(
+            Q(order_type=1, create_time__gte=b_time, create_time__lt=e_time))
 
         info = []
         total_price = 0
         for i in order_pool:
             t_info = i.info()
             total_price += i.order_total_price
-            info.append({'order_info': t_info,'goods_info':i.goods_info()})
+            info.append({'order_info': t_info, 'goods_info': i.goods_info()})
 
         result = {'message': 'ok',
                   'total_price': str(total_price),
                   'info': info}
 
-        r.set(store_id,result)
-        r.expire(store_id,86400)
-
+        redis_report.set(store_id, result, ex=86400)
         return result
 
     def confirm_clear(self):
         try:
             store_id = int(self.data.get('store_id', 0))
             store = Store.objects.get(store_id=store_id)
-        except Exception as e:
+        except Exception:
             return {'message': 'store_id error'}
 
-        if r.exists(store_id):
-            data = eval(r.get(store_id))
+        if redis_report.exists(store_id):
+            data = eval(redis_report.get(store_id))
         else:
             return {'message': 'clear order expired'}
 
@@ -1488,9 +1490,10 @@ class ClearAccount(object):
             try:
                 order = Order.objects.get(order_id=i['order_id'])
             except Exception:
-                return {'message' : 'failed'}
-            info = OrderManager.set_order_status(order=order, order_type=0, pay_from=2)
+                return {'message': 'failed'}
+            info = OrderManager.set_order_status(
+                order=order, order_type=0, pay_from=2)
             if info['message'] != 'ok':
                 return info
-        r.delete(store_id)
+        redis_report.delete(store_id)
         return info

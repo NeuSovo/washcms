@@ -1,4 +1,5 @@
 import os
+import redis
 import base64
 import qrcode
 import requests
@@ -8,6 +9,8 @@ from django.utils.six import BytesIO
 
 APPID = 'wx5c7d55175f3872b7'
 SECRET = '6050b3ca9c9b3823768ae1867ef9036e'
+redis_report = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
+
 def gen_hash():
     """
     gen_hash as session data.

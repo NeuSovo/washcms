@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
 from django.http import JsonResponse
 from django.shortcuts import HttpResponse
-
-from cms.handle import (WechatSdk, LoginManager, UserManager, AreaManager, StoreManager,
-                        EmployeeManager, CustomerUserManager, GoodsManager, OrderManager,
-                        PeiSongManager, KuGuanManager, RecoverManager, BoosReport,
-                        ClearAccount)
-from cms.apps import APIServerErrorCode as ASEC
+from cms.auth import *
+from cms.handle import *
 from cms.tools import gen_qrcode
-from cms.auth import usercheck
+from cms.apps import APIServerErrorCode as ASEC
+
 
 def parse_info(data):
     """
@@ -99,10 +96,9 @@ def login_view(request, user, body):
     """
     if 'HTTP_X_FORWARDED_FOR' in request.META:
         ip = request.META['HTTP_X_FORWARDED_FOR']
-        print('ip:', ip)
     else:
         ip = request.META['REMOTE_ADDR']
-        print(ip)
+    print (ip)
     result = {}
     login = LoginManager(user=user)
 
@@ -163,7 +159,55 @@ def boos_report_order_view(request, user, body, action=None, day=None, month=Non
     report = BoosReport(user=user, postdata=body)
 
     try:
-        method_name = action + '_report'
+        method_name = action + '_order_report'
+        result = getattr(report, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
+
+@usercheck(user_type=0)
+def boos_report_stock_view(request, user, body, action=None, day=None, month=None):
+    if day is not None:
+        body['day'] = day
+        action = 'day'
+
+    if month is not None:
+        body['month'] = month
+        action = 'month'
+
+    report = BoosReport(user=user, postdata=body)
+
+    try:
+        method_name = action + '_stock_report'
+        result = getattr(report, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
+
+@usercheck(user_type=0)
+def boos_report_store_view(request, user, body, day=None, month=None):
+    if month is not None:
+        body['month'] = month
+
+    # down day
+    action = 'month'
+
+    report = BoosReport(user=user, postdata=body)
+
+    try:
+        method_name = action + '_store_report'
         result = getattr(report, method_name)
     except AttributeError as e:
         response = HttpResponse()
@@ -290,10 +334,13 @@ def recover_view(request, user, body, action=None):
 def user_report_view(request, user, body, month=None):
     if month is not None:
         body['month'] = month
+
+    # down day
+    action = 'month'
     report = StoreManager(user=user, postdata=body)
 
     try:
-        method_name = 'report_store'
+        method_name = action + '_store_report'
         result = getattr(report, method_name)
     except AttributeError as e:
         response = HttpResponse()
@@ -398,7 +445,7 @@ def staff_peisong_report_view(request, user, body, action=None, month=None, day=
     peisong = PeiSongManager(user=user, postdata=body)
 
     try:
-        method_name = action + '_report_peisong'
+        method_name = action + '_order_report'
         result = getattr(peisong, method_name)
     except Exception as e:
         return parse_info({'message': str(e)})
