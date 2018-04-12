@@ -191,7 +191,7 @@ class PeisongProfile(models.Model):
             default=0
         )
 
-    def __str__(self):
+    def __str__(self): 
         return '{}'.format(self.wk.wk)
 
 
@@ -201,9 +201,21 @@ class Goods(models.Model):
         verbose_name = "商品列表"
         verbose_name_plural = "Goodss"
 
+    def info(self):
+        return  {'goods_id': self.goods_id,
+                  'goods_name': self.goods_name,
+                  'goods_spec': self.goods_spec,
+                  'goods_stock': self.goods_stock,
+                  'is_recover': self.is_recover,
+                  'goods_type': self.goods_type}
+
     recover_level = (
         (0, '回收'),
         (1, '不回收')
+    )
+    goods_type_choice = (
+        (0, '出售品'),
+        (1, '消耗品')
     )
     goods_id = models.AutoField(
                     primary_key=True
@@ -218,14 +230,20 @@ class Goods(models.Model):
     goods_stock = models.IntegerField(
                     default=0
                 )
+    goods_type = models.IntegerField(
+                    default=0
+                )
     is_recover = models.IntegerField(
                     default=0,
                     choices=recover_level
                 )
 
     @staticmethod
-    def goods_all():
-        return Goods.objects.all()
+    def goods_all(is_all=0):
+        if is_all == 0:
+            return Goods.objects.all()
+        else:
+            return Goods.objects.filter(goods_type=0)
 
 
 class PeisongCarStock(models.Model):
@@ -469,7 +487,6 @@ class PickOrder(models.Model):
         (1, '回库订单')
         )
     order_status_level = (
-        (-1, '取消'),
         (0, '已确认'),
         (1, '未确认')
         )

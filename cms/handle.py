@@ -14,8 +14,8 @@ from django.conf import settings
 from cms.apps import APIServerErrorCode as ASEC
 from cms.auth import UserManager, LoginManager, WechatSdk
 
-app = logging.getLogger('app.custom')
 
+app = logging.getLogger('app.custom')
 
 class AreaManager(object):
     def __init__(self, action, postdata):
@@ -476,14 +476,16 @@ class GoodsManager(object):
 
     def add_goods(self):
         goods_name = self.data['name']
-        goods_spec = int(self.data['spec'])
-        goods_stock = int(self.data['stock'])
-        is_recover = int(self.data['recover'])
+        goods_spec = int(self.data.get('spec', 1))
+        goods_stock = int(self.get('stock', 0))
+        is_recover = int(self.data.get('recover', 0))
+        goods_type = int(self.data.get('type', 0))
 
         new_goods = Goods(goods_name=goods_name,
                           goods_spec=goods_spec,
                           goods_stock=goods_stock,
-                          is_recover=is_recover)
+                          is_recover=is_recover,
+                          goods_type=goods_type)
         new_goods.save()
 
         return {'message': 'ok', 'id': new_goods.goods_id}
@@ -519,30 +521,23 @@ class GoodsManager(object):
             return {'message': 'failed'}
 
     @staticmethod
-    def all_goods():
-        goods_all = Goods.goods_all()
+    def all_goods(is_all=0):
+        goods_all = Goods.goods_all(is_all=is_all)
 
         return_list = []
         for i in goods_all:
-            return_list.append({'goods_id': i.goods_id,
-                                'goods_name': i.goods_name,
-                                'goods_spec': i.goods_spec,
-                                'goods_stock': i.goods_stock,
-                                'is_recover': i.is_recover})
+            return_list.append(i.info())
 
         return {'message': 'ok', 'info': return_list}
 
     @staticmethod
     def get_goods_info(goods_id):
         goods = Goods.objects.get(goods_id=goods_id)
-        return {'goods_id': goods.goods_id,
-                'goods_name': goods.goods_name,
-                'goods_spec': goods.goods_spec,
-                'goods_stock': goods.goods_stock,
-                'is_recover': goods.is_recover}
+        return goods.info()
 
     def reply(self):
         method_name = str(self.action) + '_goods'
+        is_all =  self.data.get('all', 0)
         try:
             method = getattr(self, method_name)
             return method()

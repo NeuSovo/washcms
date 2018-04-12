@@ -1,7 +1,9 @@
-import os
+
+import time
 import redis
 import base64
 import qrcode
+import random
 import requests
 from hashlib import sha256, md5
 from django.conf import settings
@@ -11,6 +13,13 @@ APPID = 'wx5c7d55175f3872b7'
 SECRET = '6050b3ca9c9b3823768ae1867ef9036e'
 redis_report = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
 
+try:
+    random = random.SystemRandom()
+    using_sysrandom = True
+except NotImplementedError:
+    using_sysrandom = False
+
+
 def gen_hash():
     """
     gen_hash as session data.
@@ -18,7 +27,7 @@ def gen_hash():
     and from a statistical point of view, the probability is zero.
     Return a string of length 64.
     """
-    return sha256(os.urandom(24)).hexdigest()
+    return get_random_string(64)
 
 
 def gen_qrcode(data):
@@ -78,3 +87,26 @@ def de_base64(txt):
     uid = str(uid, 'utf-8')
 
     return uid
+
+def get_random_string(length=12,
+                      allowed_chars='abcdefghijklmnopqrstuvwxyz'
+                                    'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/+'):
+    """
+    Return a securely generated random string.
+
+    The default length of 12 with the a-z, A-Z, 0-9 character set returns
+    a 71-bit value. log_2((26+26+10)^12) =~ 71 bits
+    """
+    if not using_sysrandom:
+        # This is ugly, and a hack, but it makes things better than
+        # the alternative of predictability. This re-seeds the PRNG
+        # using a value that is hard for an attacker to predict, every
+        # time a random string is required. This may change the
+        # properties of the chosen random sequence slightly, but this
+        # is better than absolute predictability.
+        random.seed(
+            sha256(
+                ('%s%s%s' % (random.getstate(), time.time(), settings.SECRET_KEY)).encode()
+            ).digest()
+        )
+    return ''.join(random.choice(allowed_chars) for i in range(length))
