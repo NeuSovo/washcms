@@ -229,8 +229,8 @@ class UserManager(object):
         :param profile:
         :return:
         """
-        user.nick_name = profile['name']
-        user.avatar_links = profile['url']
+        user.nick_name = profile.get('name','nick_name')
+        user.avatar_links = profile.get('url','https://pic3.zhimg.com/aadd7b895_s.jpg')
         user.save()
 
         return user

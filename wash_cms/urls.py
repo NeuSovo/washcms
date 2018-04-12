@@ -26,6 +26,7 @@ urlpatterns = [
 
     path('auth/reg', register_view),
     path('auth/login', login_view),
+    path('auth/profile', profile_view),
 
     path('tools/qrcode/<str:data>', qrcode_view),
 

@@ -116,6 +116,12 @@ def login_view(request, user, body):
         return response
 
 
+@usercheck()
+def profile_view(request, user, body):
+    t_user = UserManager.set_user_profile(user, body)
+    return parse_info({'message': 'ok'})
+
+
 @usercheck(user_type=0)
 def change_deliveryarea_view(request, user, body):
     action = request.GET.get('action', 'all')
