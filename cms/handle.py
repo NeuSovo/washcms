@@ -491,16 +491,19 @@ class GoodsManager(object):
         return {'message': 'ok', 'id': new_goods.goods_id}
 
     def addstock_goods(self):
-        try:
+        goods_list = int(self.data.get('goods_list', []))            
+
+        for i in goods_list:
             goods_id = int(self.data.get('goods_id', 0))
             count = int(self.data.get('count', 0))
-            goods = Goods.objects.get(goods_id=goods_id)
-        except Exception:
-            return {'message': 'goods_id not exist'}
+            try:
+                goods = Goods.objects.get(goods_id=goods_id)
+                goods.goods_stock += count
+                goods.save()
+            except Exception:
+                return {'message': 'goods_id not exist'}
 
-        goods.goods_stock += count
-        goods.save()
-        return {'message': 'ok', 'new_stock': goods.goods_stock}
+        return {'message': 'ok'}
 
     def del_goods(self):
         goods_id = int(self.data['goods_id'])
