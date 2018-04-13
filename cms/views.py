@@ -382,7 +382,7 @@ def staff_profile_view(request, action, user, body):
 def staff_goods_view(request, action, user, body):
     result = {}
     if action == 'all':
-        result = GoodsManager.all_goods(self.body.get('is_all', 0))
+        result = GoodsManager.all_goods(body.get('is_all', 0))
 
     response = parse_info(result)
 
