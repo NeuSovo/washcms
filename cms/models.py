@@ -202,12 +202,13 @@ class Goods(models.Model):
         verbose_name_plural = "Goodss"
 
     def info(self):
-        return  {'goods_id': self.goods_id,
+        return  { 'goods_id': self.goods_id,
                   'goods_name': self.goods_name,
                   'goods_spec': self.goods_spec,
                   'goods_stock': self.goods_stock,
                   'is_recover': self.is_recover,
-                  'goods_type': self.goods_type}
+                  'goods_type': self.goods_type,
+                  'goods_img':self.goods_img}
 
     recover_level = (
         (0, '回收'),
@@ -220,6 +221,11 @@ class Goods(models.Model):
     goods_id = models.AutoField(
                     primary_key=True
                 )
+    goods_img = models.CharField(
+                    max_length=155,
+                    null=True,
+                    default='wx5c7d55175f3872b7.o6zAJs8x6UgW6Y0lRp1jPSO_gcUA.3x4A1YBcSFlHdc484c27e29d772bb6cb9b96aa76ebcc.jpg'
+            )
     goods_name = models.CharField(
                     max_length=155,
                     default='not name'

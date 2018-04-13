@@ -6,6 +6,7 @@ from cms.handle import *
 from cms.tools import gen_qrcode
 from cms.apps import APIServerErrorCode as ASEC
 
+from cms.cos import get_auth
 
 def parse_info(data):
     """
@@ -14,6 +15,13 @@ def parse_info(data):
     :return dict data to json,and return HttpResponse
     """
     return JsonResponse(data)
+
+
+def tools_sign(request):
+    Method = request.GET['Method']
+    Key = request.GET['Key']
+    getAuth = get_auth(Method, Key, params={'Method':Method,'Key':Key})
+    return HttpResponse(getAuth)
 
 
 def index(request):

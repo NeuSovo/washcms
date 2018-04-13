@@ -1,12 +1,13 @@
 import time
 import json
+import hashlib
 import logging
-
 from cms.models import *
 from cms.tools import *
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 from cms.apps import APIServerErrorCode as ASEC
+
 
 app = logging.getLogger('app.custom')
 request_backup = logging.getLogger('app.backup')
@@ -307,3 +308,4 @@ class UserManager(object):
         user.save()
 
         return user
+

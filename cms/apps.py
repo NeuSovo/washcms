@@ -48,3 +48,9 @@ CodeMessage = {
     APIServerErrorCode.CHECK_USER_FAILED     :'Verify User Failed',
     APIServerErrorCode.LOGIN_SUCCESS         :'Login Success',
     }
+
+
+class RedisServerKey(object):
+    """docstring for RedisServerKey"""
+    month_store_report = '{store_id}_{month}_month_store_report'
+    day_store_report = '{store_id}_{day}_day_store_report'

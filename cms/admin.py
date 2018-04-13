@@ -122,7 +122,7 @@ class AreaAdmin(admin.ModelAdmin):
 
 class GoodsAdmin(admin.ModelAdmin):
 
-    list_display = ('goods_name', 'goods_spec', 'goods_stock', 'is_recover',)
+    list_display = ('goods_name', 'goods_spec', 'goods_stock', 'is_recover','goods_type')
 
 
 class OrderDetailAdmin(admin.ModelAdmin):
