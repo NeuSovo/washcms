@@ -88,6 +88,12 @@ class Store(models.Model):
         (0, '日结'),
         (1, '月结'),
     )
+
+    # 只有在押金不为0时此选项才有意义
+    despoit_level = (
+        (0, '押金已付'),
+        (1, '押金未付')
+    )
     area_level = []
     # for i in DeliveryArea.area_all():
     #     area_level.append([i.id, i.area_name])
@@ -116,6 +122,9 @@ class Store(models.Model):
                 )
     store_deposit = models.IntegerField(
                     default=0
+                )
+    has_deposit = models.IntegerField(
+                    default=0,    
                 )
 
     @staticmethod

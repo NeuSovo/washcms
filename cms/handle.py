@@ -98,22 +98,26 @@ class StoreManager(object):
     def add_store(self):
         data = self.data
         store_id = StoreManager.gen_store_id()
+        area_id = int(data.get('area', 0))
+        deposit = int(data.get('deposit', 0))
+        name = data.get('name')
+        pay_type = data.get('pay_type', 0)
 
         try:
-            area = DeliveryArea.objects.get(id=int(data['area']))
+            area = DeliveryArea.objects.get(id=area_id)
         except Exception:
             return {'message': 'area_id not exists'}
-
+        has_deposit = 1 if deposit else 0
         new_store = Store(store_id=store_id,
-                          store_name=data['name'],
+                          store_name=name,
                           # store_phone=data['phone'],
                           # store_addr=data['addr'],
                           store_area=area,
-                          store_pay_type=data['pay_type'],
-                          store_deposit=data['deposit'])
+                          store_pay_type=pay_type,
+                          store_deposit=deposit,
+                          has_deposit=has_deposit)
 
         new_store.save()
-
         return {'message': 'ok', 'id': new_store.store_id}
 
     def del_store(self):
@@ -296,9 +300,11 @@ class StoreManager(object):
 
         try:
             for i in goods_pool:
+                # 押金跳过
+                if i.goods_id == -1:
+                    continue
                 store_goods = StoreGoods.objects.get(
                     store=order.store, goods=i.goods,)
-
                 try:
                     car_goods = PeisongCarStock.objects.get(
                         wk=ps_user, goods=i.goods, goods_type=goods_type)
@@ -625,7 +631,20 @@ class OrderManager(object):
                         total_price=total_price
                     )
                 )
-                # pass
+            # 押金选项
+            if store.has_deposit == 1:
+                order_all_goods.append(
+                    OrderDetail(
+                        order_id=order_id,
+                        goods=Goods.objects.get(goods_id=-1),
+                        goods_count=1,
+                        goods_price=store.store_deposit,
+                        total_price=store.store_deposit
+                    )
+                )
+                order_price += store.store_deposit
+                store.has_deposit = 0
+                store.save()
 
             OrderDetail.objects.bulk_create(order_all_goods)
 
@@ -1022,6 +1041,8 @@ class PeiSongManager(object):
 
         for i in info:
             goods_info = GoodsManager.get_goods_info(i.goods_id)
+            if i.goods_id == -1:
+                continue
             result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
                            'goods_spec': goods_info['goods_spec'],
