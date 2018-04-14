@@ -18,9 +18,8 @@ def parse_info(data):
 
 
 def tools_sign(request):
-    Method = request.GET['Method']
     Key = request.GET['Key']
-    getAuth = get_auth(Method, Key, params={'Method':Method,'Key':Key})
+    getAuth = get_auth(Key)
     return HttpResponse(getAuth)
 
 

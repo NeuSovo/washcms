@@ -217,7 +217,7 @@ class Goods(models.Model):
                   'goods_stock': self.goods_stock,
                   'is_recover': self.is_recover,
                   'goods_type': self.goods_type,
-                  'goods_img':self.goods_img}
+                  'goods_img': 'http://test-12345-1252731440.cos.ap-beijing.myqcloud.com/' + self.goods_img}
 
     recover_level = (
         (0, '回收'),
