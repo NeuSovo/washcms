@@ -508,7 +508,8 @@ class GoodsManager(object):
             goods.goods_spec = goods_spec
             goods.goods_img = goods_img
             goods.save()
-        except Exception:
+        except Exception as e:
+            app.info(str(e)) 
             return {'message' : 'failed'}
 
         return {'message': 'ok','new_info': goods.info()}
