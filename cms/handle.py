@@ -483,7 +483,7 @@ class GoodsManager(object):
     def add_goods(self):
         goods_name = self.data['name']
         goods_spec = int(self.data.get('spec', 1))
-        goods_stock = int(self.get('stock', 0))
+        goods_stock = int(self.data.get('stock', 0))
         goods_img = self.data.get('goods_img', '0')
         is_recover = int(self.data.get('recover', 0))
         goods_type = int(self.data.get('type', 0))
@@ -568,7 +568,7 @@ class GoodsManager(object):
             method = getattr(self, method_name)
             return method()
         except Exception as e:
-            app.info(str(e))
+            app.error(str(e))
             return GoodsManager.all_goods()
 
 
