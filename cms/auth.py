@@ -42,21 +42,14 @@ def usercheck(user_type=-1):
 
                 return response
 
-            try:
-                user_key = Session.objects.get(session_data=wckey)
-            except Exception:
+            if redis_session.exists(wckey):
+                wk = redis_session.get(wckey).decode('utf-8')
+            else:
                 result['code'] = ASEC.SESSION_NOT_WORK
                 result['message'] = ASEC.getMessage(ASEC.SESSION_NOT_WORK)
+                return parse_info(result)            
 
-                return parse_info(result)
-
-            if user_key.expire_date < datetime.now():
-                result['code'] = ASEC.SESSION_EXPIRED
-                result['message'] = ASEC.getMessage(ASEC.SESSION_EXPIRED)
-
-                return parse_info(result)
-
-            user = User.objects.get(wk=user_key.session_key)
+            user = User.objects.get(wk=str(wk))
 
             app.info("[{}][{}][{}][{}]".format(
                 func.__name__, user.wk, action, user.user_type))
@@ -102,12 +95,7 @@ class WechatSdk(object):
             return self.flush_session()
 
         sess = gen_hash()
-
-        Session(session_key=self.openid,
-                session_data=sess,
-                we_ss_key=self.wxsskey,
-                expire_date=datetime.now() + timedelta(30)).save()
-
+        redis_session.set(sess,self.openid,ex=259200)
         user = User(wk=self.openid)
         user.save()
         # 自动为用户生成Profile
@@ -119,18 +107,8 @@ class WechatSdk(object):
                 'message': ASEC.getMessage(ASEC.REG_SUCCESS)}
 
     def flush_session(self):
-        try:
-            this_user = Session.objects.get(session_key=self.openid)
-        except Exception as e:
-            this_user = Session()
-
         sess = gen_hash()
-
-        this_user.we_ss_key = self.wxsskey
-        this_user.session_data = sess
-        this_user.expire_date = datetime.now() + timedelta(days=3)
-        this_user.save()
-
+        redis_session.set(sess,self.openid,ex=259200)
         # 刷新Cookie成功
         return {'sess': sess,
                 'code': ASEC.FLUSH_SESSION_SUCCESS,
