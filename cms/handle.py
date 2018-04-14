@@ -18,13 +18,16 @@ from cms.auth import UserManager, LoginManager, WechatSdk
 app = logging.getLogger('app.custom')
 
 class AreaManager(object):
-    def __init__(self, action, postdata):
-        self.action = action
+    def __init__(self, postdata):
         self.data = postdata
 
     def add_area(self):
-        new_area = DeliveryArea(area_name=self.data['name'])
-        new_area.save()
+        try:
+            new_area = DeliveryArea(area_name=self.data['name'])
+            new_area.save()
+        except Exception:
+            app.info(Exception("add_area Type Errror"))
+            return {'message': '错误参数'}
 
         return {'message': 'ok', 'id': new_area.id}
 
@@ -45,7 +48,12 @@ class AreaManager(object):
         return {'message': 'ok'}
 
     def change_area(self):
-        area = DeliveryArea.objects.get(id=int(self.data['id']))
+        area_id = int(self.data.get('id', 0))
+        try:
+            area = DeliveryArea.objects.get(id=area_id)
+        except Exception:
+            return {'message': '区域id不存在'}
+
         area.area_name = self.data['name']
         area.save()
         return {'message': 'ok', 'new_name': area.area_name}
@@ -61,15 +69,6 @@ class AreaManager(object):
 
         return {'message': 'ok',
                 'info': all_area_list}
-
-    def reply(self):
-        method_name = self.action + '_area'
-        try:
-            method = getattr(self, method_name)
-            return method()
-        except Exception as e:
-            app.info(str(e))
-            return AreaManager.all_area()
 
 
 class StoreManager(object):
