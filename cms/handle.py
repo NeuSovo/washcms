@@ -53,7 +53,7 @@ class AreaManager(object):
     @staticmethod
     def all_area():
         all_area = DeliveryArea.area_all()
-        all_area_list = []
+        all_area_list = list()
 
         for _i in all_area:
             all_area_list.append({'id': _i.id,
@@ -276,7 +276,7 @@ class StoreManager(object):
     @staticmethod
     def all_store():
         all_store = Store.store_all()
-        all_store_list = []
+        all_store_list = list()
         for store in all_store:
             all_store_list.append(store.info())
 
@@ -385,7 +385,7 @@ class EmployeeManager(object):
         all_employee = User.objects.filter(
             Q(user_type=0) | Q(user_type=1) | Q(user_type=2))
 
-        all_employee_list = []
+        all_employee_list = list()
         for i in all_employee:
             all_employee_list.append(UserManager.get_user_info(i))
 
@@ -516,7 +516,7 @@ class GoodsManager(object):
         return {'message': 'ok','new_info': goods.info()}
 
     def addstock_goods(self):
-        goods_list = int(self.data.get('goods_list', []))            
+        goods_list = int(self.data.get('goods_list', list()))            
 
         for i in goods_list:
             goods_id = int(self.data.get('goods_id', 0))
@@ -552,8 +552,10 @@ class GoodsManager(object):
     def all_goods(is_all=0):
         goods_all = Goods.goods_all(is_all=is_all)
 
-        return_list = []
+        return_list = list()
         for i in goods_all:
+            if i.goods_id == -1:
+                continue
             return_list.append(i.info())
 
         return {'message': 'ok', 'info': return_list}
@@ -607,7 +609,7 @@ class OrderManager(object):
             [TODO] despoit
             """
             pack_goods = self.data['goods_list']
-            order_all_goods = []
+            order_all_goods = list()
             order_price = 0
 
             for i in pack_goods:
@@ -734,7 +736,7 @@ class OrderManager(object):
     def status_order(self):
         status = int(self.data['status'])
         store = UserManager.get_user_store(user=self.user).store
-        status_order = []
+        status_order = list()
 
         if status > 3:
             return {'message': 'failed'}
@@ -785,7 +787,7 @@ class PeiSongManager(object):
 
         """
         result = {}
-        info = []
+        info = list()
 
         order_pool = Order.objects.filter(area=self.area, order_type=2)
 
@@ -814,7 +816,7 @@ class PeiSongManager(object):
         return {'message': 'ok'}
 
     def get_recover_peisong(self):
-        info = []
+        info = list()
         recover_order_pool = RecoverOrder.objects.filter(
             area=self.area, order_type=1)
 
@@ -887,9 +889,9 @@ class PeiSongManager(object):
     def stock_report_info(pick_pool):
         pick_order_sum = 0
         recover_order_sum = 0
-        goods_sum = []
+        goods_sum = list()
         goods_sum_tmp = {}
-        order_info = []
+        order_info = list()
 
         for i in pick_pool.iterator():
             goods_info = i.goods_info()
@@ -978,7 +980,7 @@ class PeiSongManager(object):
 
     def get_pay_peisong(self):
         result = {}
-        info = []
+        info = list()
         order_pool = Order.objects.filter(
             area=self.area, order_type=1, pay_type=0)
 
@@ -1014,8 +1016,8 @@ class PeiSongManager(object):
         return {'message': 'ok'}
 
     def get_car_stock(self):
-        result = []
-        old_info = []
+        result = list()
+        old_info = list()
         goods_pool = PeisongCarStock.objects.filter(wk=self.ps_user)
         for i in goods_pool:
             if i.goods_type == 0:
@@ -1034,7 +1036,7 @@ class PeiSongManager(object):
     def get_ps_stock(self):
         # pass
         order_pool = Order.objects.filter(area=self.area, order_type=2)
-        result = []
+        result = list()
 
         info = OrderDetail.objects.raw('select 1 as id,goods_id,sum(goods_count) as goods_count \
                                         from cms_orderdetail where cms_orderdetail.order_id in \
@@ -1058,7 +1060,7 @@ class PeiSongManager(object):
         pick_user = PeisongProfile.objects.get(wk=self.user)
 
         def save_pick_detail(order_id, goods_list):
-            pickorder_all_goods = []
+            pickorder_all_goods = list()
             for i in goods_list:
                 goods_id = i['goods_id']
                 goods_count = i['goods_count']
@@ -1097,7 +1099,7 @@ class PeiSongManager(object):
     def get_pick(self):
         # filter all order
         # todo order_type = 1
-        info = []
+        info = list()
         pick_user = PeisongProfile.objects.get(wk=self.user)
         order_pool = PickOrder.objects.filter(pick_user=pick_user)
 
@@ -1117,7 +1119,7 @@ class KuGuanManager(object):
 
     def get_pick(self):
         order_pool = PickOrder.objects.filter(order_status=1)
-        info = []
+        info = list()
         for i in order_pool:
             t_info = PeiSongManager.get_pick_order_info(i)
             t_info['user_info'] = {}
@@ -1189,7 +1191,7 @@ class RecoverManager(object):
         order_id = OrderManager.gen_order_id()
 
         def save_recover_detail(order_id, goods_list):
-            recover_all_goods = []
+            recover_all_goods = list()
             for i in goods_list:
                 goods_id = i['goods_id']
                 goods_count = i['goods_count']
@@ -1467,7 +1469,7 @@ class ClearAccount(object):
         self.data = postdata
 
     def getmonth_clear(self):
-        info = []
+        info = list()
         store_pool = Store.objects.filter(store_pay_type=1)
         for i in store_pool:
             info.append({'stroe_id': i.store_id,
@@ -1498,7 +1500,7 @@ class ClearAccount(object):
         order_pool = Order.objects.filter(
             Q(order_type=1, create_time__gte=b_time, create_time__lt=e_time))
 
-        info = []
+        info = list()
         total_price = 0
         for i in order_pool:
             t_info = i.info()
