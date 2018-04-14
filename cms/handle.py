@@ -515,11 +515,11 @@ class GoodsManager(object):
         return {'message': 'ok','new_info': goods.info()}
 
     def addstock_goods(self):
-        goods_list = int(self.data.get('goods_list', list()))            
+        goods_list = self.data.get('goods_list', list())            
 
         for i in goods_list:
-            goods_id = int(self.data.get('goods_id', 0))
-            count = int(self.data.get('count', 0))
+            goods_id = int(i.get('goods_id', 0))
+            count = int(i.get('count', 0))
             try:
                 goods = Goods.objects.get(goods_id=goods_id)
                 goods.goods_stock += count
