@@ -493,7 +493,7 @@ class GoodsManager(object):
                           goods_stock=goods_stock,
                           is_recover=is_recover,
                           goods_type=goods_type,
-                          goods_sum=goods_img)
+                          goods_img=goods_img)
         new_goods.save()
 
         return {'message': 'ok', 'id': new_goods.goods_id}
