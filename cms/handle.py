@@ -502,12 +502,12 @@ class GoodsManager(object):
         goods_id = self.data.get('goods_id', 0)
         goods_name = self.data['name']
         goods_spec = int(self.data.get('spec', 1))
-        goods_img = self.data.get('goods_img', '0')
+        goods_img = self.data.get('goods_img', None)
         try:
             goods = Goods.objects.get(goods_id=goods_id)
             goods.goods_name = goods_name
             goods.goods_spec = goods_spec
-            goods.goods_img = goods_img
+            goods.goods_img = goods_img or goods.goods_img
             goods.save()
         except Exception as e:
             app.info(str(e)) 
