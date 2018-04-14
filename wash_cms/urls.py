@@ -30,6 +30,7 @@ urlpatterns = [
 
     path('tools/qrcode/<str:data>', qrcode_view),
     path('tools/sign', tools_sign),
+    path('tools/upload', upload_view),
 
     path('boss/area', change_deliveryarea_view),
     path('boss/store', change_store_view),

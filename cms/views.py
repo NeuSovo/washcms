@@ -23,6 +23,10 @@ def tools_sign(request):
     return HttpResponse(getAuth)
 
 
+def upload_view(request):
+    print (str(request.FILES))
+
+
 def index(request):
     """
     view for index:
@@ -132,10 +136,17 @@ def profile_view(request, user, body):
 @usercheck(user_type=0)
 def change_deliveryarea_view(request, user, body):
     action = request.GET.get('action', 'all')
-    result = AreaManager(action=action, postdata=body)
-    
-    response = parse_info(result.reply())
+    area = AreaManager(postdata=body)
 
+    try:
+        method_name = action + '_area'
+        result = getattr(area, method_name)
+    except Exception as e:
+        response = HttpResponse("404")
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
     return response
 
 
