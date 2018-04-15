@@ -28,9 +28,11 @@ urlpatterns = [
     path('auth/login', login_view),
     path('auth/profile', profile_view),
 
+    path('ad', ad_view),
+    path('ad/<str:action>', set_ad_view),
+
     path('tools/qrcode/<str:data>', qrcode_view),
     path('tools/sign', tools_sign),
-    path('tools/upload', upload_view),
 
     path('boss/area', change_deliveryarea_view),
     path('boss/store', change_store_view),

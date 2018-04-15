@@ -23,8 +23,22 @@ def tools_sign(request):
     return HttpResponse(getAuth)
 
 
-def upload_view(request):
-    print (str(request.FILES))
+def ad_view(request):
+    return parse_info(Ad.get())
+
+
+@usercheck(user_type=0)
+def set_ad_view(request, action, body, user):
+    ad = Ad(postdata=body)
+    try:
+        method_name = action + '_ad'
+        result = getattr(ad, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    return parse_info(result())
 
 
 def index(request):

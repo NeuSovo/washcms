@@ -1537,3 +1537,52 @@ class ClearAccount(object):
                 return info
         redis_report.delete(store_id)
         return info
+
+
+class Ad:
+    def __init__(self, postdata=None):
+        self.data = postdata
+
+    def setb_ad(self):
+        img_list = self.data['img_list']
+        for i in img_list:
+            AdBanner(b_img=i).save()
+        return {'message': 'ok','info': AdBanner.all()}
+
+    def setc_ad(self):
+        c_title = self.data.get('title','')
+        c_content = self.data.get('img','')
+        c_img = self.data.get('img','')
+
+        if len(c_title) == 0 or len(c_content) ==0:
+            return {'message': '标题或内容不能为空'}
+
+        AdContent(c_title=c_title,c_content=c_content,c_img=c_img).save()
+
+        return {'message': 'ok', 'info': AdContent.all()}
+
+    def delc_ad(self):
+        id = int(self.data.get('id', 0))
+        try:
+            ad = AdContent.objects.get(id=id)
+        except:
+            return {'message': 'id不存在'}
+
+        ad.delete()
+        return {'message': 'ok'}
+
+    def delb_ad(self):
+        id = int(self.data.get('id', 0))
+        try:
+            ad = AdBanner.objects.get(id=id)
+        except:
+            return {'message': 'id不存在'}
+
+        ad.delete()
+        return {'message': 'ok'}
+
+    @staticmethod
+    def get():
+        return {'message': 'ok',
+                'banner': AdBanner.all(),
+                'content': AdContent.all()}
