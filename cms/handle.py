@@ -105,7 +105,7 @@ class StoreManager(object):
         try:
             area = DeliveryArea.objects.get(id=area_id)
         except Exception:
-            return {'message': 'area_id not exists'}
+            return {'message': '区域id不存在'}
         has_deposit = 1 if deposit else 0
         new_store = Store(store_id=store_id,
                           store_name=name,
@@ -143,7 +143,7 @@ class StoreManager(object):
 
         except Exception as e:
             app.error(str(e) + '{}'.format(self.data['id']))
-            return {'message': 'delete failed'}
+            return {'message': '删除失败'}
 
         return {'message': 'ok'}
 
@@ -164,13 +164,13 @@ class StoreManager(object):
             return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
             app.error(str(e) + '{}'.format(data))
-            return {'message': str(e)}
+            return {'message': '保存失败 \n'+ str(e)}
 
     def getprice_store(self):
         try:
             store = Store.objects.get(store_id=self.data['store_id'])
         except Exception as e:
-            return {'message': 'store_id not exist'}
+            return {'message': '商户id不存在'}
 
         goods_list = store.price()
         return {'message': 'ok', 'goods_list': goods_list}
@@ -179,17 +179,16 @@ class StoreManager(object):
         try:
             price_list = self.data['goods_list']
             store_id = int(self.data['store_id'])
-        except Exception as e:
-            return {'message': str(e)}
+        except Exception:
+            return {'message': '参数错误'}
 
         try:
             store = Store.objects.get(store_id=store_id)
             store_goods = store.price()
         except Exception as e:
-            return {'message': 'store_id is not exists'}
+            return {'message': '商户id不存在'}
 
-        store_goods_list = [i.goods_id for i in store_goods]
-
+        store_goods_list = [i['goods_id'] for i in store_goods]
         for goods in price_list:
             goods_id = goods['goods_id']
             goods_price = goods['goods_price']
@@ -199,7 +198,7 @@ class StoreManager(object):
                 t_goods = Goods.objects.get(goods_id=goods_id)
             except Exception as e:
                 app.error(str(e))
-                return {'message': 'failed'}
+                return {'message': '商品不存在'}
 
             if goods['goods_id'] not in store_goods_list:
                 new_price = StoreGoods(store=store,
@@ -213,7 +212,7 @@ class StoreManager(object):
                 this_goods.goods_price = goods_price
                 this_goods.save()
 
-        return {'message': 'ok'}
+        return {'message': 'ok','new_price': store.price()}
 
     @staticmethod
     def store_report_info(order_pool, recover_order_pool):
@@ -338,7 +337,7 @@ class StoreManager(object):
             method = getattr(self, method_name)
             return method()
         except AttributeError as e:
-            app.info(str(e))
+            app.error(str(e))
             return StoreManager.all_store()
 
 
@@ -352,14 +351,14 @@ class EmployeeManager(object):
         set_type = int(self.data.get('set_type', -1))
 
         if set_type < 0:
-            return {'message': 'failed'}
+            return {'message': '设置失败'}
 
         if set_type == 2:
             area_id = int(self.data.get('area_id', 0))
             try:
                 area = DeliveryArea.objects.get(id=area_id)
             except Exception as e:
-                return {'message': 'area not exist'}
+                return {'message': '区域id不存在'}
 
         else:
             area = None
@@ -368,13 +367,13 @@ class EmployeeManager(object):
             uid = de_base64(txt=uid)
         except Exception as e:
             app.info(str(e))
-            return {'message': 'failed'}
+            return {'message': '用户id错误'}
 
         try:
             user = User.objects.get(wk=uid)
         except Exception as e:
             app.error(str(e))
-            return {'message': 'failed'}
+            return {'message': '用户id错误'}
 
         UserManager.set_user_type(user, set_type=set_type, area=area)
         return {'message': 'ok'}
@@ -396,8 +395,8 @@ class EmployeeManager(object):
             method = getattr(self, method_name)
             return method()
         except Exception as e:
-            app.info(str(e))
-            raise e
+            app.error(str(e))
+            return {'message': '参数错误'}
 
 
 class CustomerUserManager(object):
@@ -414,7 +413,7 @@ class CustomerUserManager(object):
         user = self.user
 
         if user.user_type <= 3:
-            return {'message': 'failed'}
+            return {'message': '已绑定商家'}
 
         new_customer = CustomerProfile(wk=user, store=store)
         new_customer.save()
@@ -430,7 +429,7 @@ class CustomerUserManager(object):
         try:
             store = Store.objects.get(store_id=store_id)
         except Exception:
-            return {"message": 'store_id not exist'}
+            return {"message": '商户id不存在，请联系管理员'}
 
         return self.bind(store)
 
@@ -509,8 +508,8 @@ class GoodsManager(object):
             goods.goods_img = goods_img or goods.goods_img
             goods.save()
         except Exception as e:
-            app.info(str(e)) 
-            return {'message' : 'failed'}
+            app.error(str(e)) 
+            return {'message' : '保存失败\n' + str(e)}
 
         return {'message': 'ok','new_info': goods.info()}
 
@@ -525,7 +524,7 @@ class GoodsManager(object):
                 goods.goods_stock += count
                 goods.save()
             except Exception:
-                return {'message': 'goods_id not exist'}
+                return {'message': '商品id不存在'}
 
         return {'message': 'ok'}
 
@@ -545,7 +544,7 @@ class GoodsManager(object):
             return {'message': 'ok'}
         except Exception as e:
             app.info(str(e))
-            return {'message': 'failed'}
+            return {'message': '设置失败'}
 
     @staticmethod
     def all_goods(is_all=0):
@@ -566,7 +565,9 @@ class GoodsManager(object):
 
     def reply(self):
         method_name = str(self.action) + '_goods'
-        is_all =  self.data.get('all', 0)
+        is_all =  self.data.get('is_all', 0)
+        if self.action == 'all':
+            return GoodsManager.all_goods(is_all)
         try:
             method = getattr(self, method_name)
             return method()
@@ -594,7 +595,7 @@ class OrderManager(object):
             print ('_redis')
             return eval(redis_report.get(store.store_id))
 
-        return {'message': 'None'}
+        return {'message': '暂时还没有提交清账订单'}
 
     def save_order(self):
         user = self.user
@@ -714,7 +715,7 @@ class OrderManager(object):
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
-            return {'message': 'order_id failed'}
+            return {'message': '订单号错误'}
 
         order_info = order.info()
 
@@ -728,7 +729,7 @@ class OrderManager(object):
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
-            return {'message': 'order_id failed'}
+            return {'message': '订单号错误'}
 
         return OrderManager.set_order_status(order, 3)
 
@@ -806,7 +807,7 @@ class PeiSongManager(object):
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
-            return {'message': 'order_id failed'}
+            return {'message': '订单号错误'}
 
         res = OrderManager.set_order_status(order, 1, ps_user=self.ps_user)
         if res['message'] != 'ok':
@@ -829,12 +830,12 @@ class PeiSongManager(object):
         try:
             order_id = int(self.data['order_id'])
         except Exception:
-            return {'message': 'order_id failed'}
+            return {'message': '订单号错误'}
 
         try:
             order = RecoverOrder.objects.get(order_id=order_id)
         except Exception:
-            return {'message': 'order_id not exists'}
+            return {'message': '订单号错误'}
 
         if order.order_type == 0:
             return {'message': 'ok'}
@@ -1005,7 +1006,7 @@ class PeiSongManager(object):
         try:
             order = Order.objects.get(order_id=order_id)
         except Exception as e:
-            return {'message': 'order_id failed'}
+            return {'message': '订单号错误'}
 
         res = OrderManager.set_order_status(order, 0, pay_from=pay_from)
 
@@ -1068,7 +1069,7 @@ class PeiSongManager(object):
                     goods = Goods.objects.get(goods_id=goods_id)
                 except Exception as e:
                     app.info(str(e))
-                    return {'message': 'goods_id does not exist'}
+                    return {'message': '商品id不存在'}
 
                 pickorder_all_goods.append(
                     PickOrderDetail(
@@ -1134,7 +1135,7 @@ class KuGuanManager(object):
             order_id = int(self.data.get('order_id', 0))
             order = PickOrder.objects.get(order_id=order_id)
         except:
-            return {'message': 'order_id error'}
+            return {'message': '订单号错误'}
 
         # todo goods_list
         if order.order_status == 0:
@@ -1159,7 +1160,7 @@ class KuGuanManager(object):
         try:
             order = PickOrder.objects.get(order_id=order_id)
         except:
-            return {'message': 'order_id error'}
+            return {'message': '订单号错误'}
 
         goods_list = self.data['goods_list']
 
@@ -1199,7 +1200,7 @@ class RecoverManager(object):
                     goods = Goods.objects.get(goods_id=goods_id)
                 except Exception as e:
                     app.info(str(e))
-                    return {'message': 'goods_id does not exist'}
+                    return {'message': '商品id不存在'}
 
                 recover_all_goods.append(
                     RecoverModelDetail(
@@ -1237,7 +1238,7 @@ class RecoverManager(object):
         try:
             order = RecoverOrder.objects.get(order_id=order_id)
         except:
-            return {'message': 'order_id error'}
+            return {'message': '订单号错误'}
 
         if order.order_type == 0:
             return {'message': 'failed'}
@@ -1255,7 +1256,7 @@ class RecoverManager(object):
             order_pool = RecoverOrder.objects.filter(
                 store=self.store_user.store, order_type=1)
         except:
-            return {'message': 'order_id error'}
+            return {'message': '订单号错误'}
 
         info = [RecoverManager.get_recover_order_info(i) for i in order_pool]
         return {'message': 'ok',
@@ -1484,7 +1485,7 @@ class ClearAccount(object):
             store_id = int(self.data.get('store_id', 0))
             store = Store.objects.get(store_id=store_id)
         except Exception as e:
-            return {'message': 'store_id error'}
+            return {'message': '商户id不存在'}
 
         try:
             b_time = datetime.strptime(self.data.get('b_time'), '%Y-%m-%d')
@@ -1494,7 +1495,7 @@ class ClearAccount(object):
                 print ('_redis')
                 return eval(redis_report.get(store_id))
             else:
-                return {'message': 'time error'}
+                return {'message': '时间错误'}
 
         order_pool = Order.objects.filter(
             Q(order_type=1, create_time__gte=b_time, create_time__lt=e_time))
@@ -1518,7 +1519,7 @@ class ClearAccount(object):
             store_id = int(self.data.get('store_id', 0))
             store = Store.objects.get(store_id=store_id)
         except Exception:
-            return {'message': 'store_id error'}
+            return {'message': '商户id不存在'}
 
         if redis_report.exists(store_id):
             data = eval(redis_report.get(store_id))

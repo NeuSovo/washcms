@@ -148,14 +148,11 @@ class Store(models.Model):
         all_store_price = StoreGoods.objects.filter(store=self)
         result = []
         for i in all_store_price:
-            result.append(
-                {'goods_id': i.goods.goods_id,
-                 'goods_name': i.goods.goods_name,
-                 'goods_spec': i.goods.goods_spec,
-                 'goods_price': float(i.goods_price),
-                 'goods_stock': i.goods.goods_stock,
-                 'goods_store_stock': i.goods_stock,
-                 'is_recover': i.goods.is_recover})
+            t_info = i.goods.info()
+            t_info['goods_price'] = float(i.goods_price)
+            t_info['goods_store_stock'] = i.goods_stock
+
+            result.append(t_info)
 
         return result
 

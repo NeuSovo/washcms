@@ -1,4 +1,3 @@
-
 import time
 import redis
 import base64
@@ -28,7 +27,7 @@ def gen_hash():
     and from a statistical point of view, the probability is zero.
     Return a string of length 64.
     """
-    return get_random_string(64)
+    return get_random_string(128)
 
 
 def gen_qrcode(data):
