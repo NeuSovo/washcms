@@ -408,7 +408,7 @@ class CustomerUserManager(object):
 
     def bind(self, store):
         """
-        [TODO] Rebind 
+        [TODO] Rebind
         """
         user = self.user
 
@@ -508,13 +508,13 @@ class GoodsManager(object):
             goods.goods_img = goods_img or goods.goods_img
             goods.save()
         except Exception as e:
-            app.error(str(e)) 
+            app.error(str(e))
             return {'message' : '保存失败\n' + str(e)}
 
         return {'message': 'ok','new_info': goods.info()}
 
     def addstock_goods(self):
-        goods_list = self.data.get('goods_list', list())            
+        goods_list = self.data.get('goods_list', list())
 
         for i in goods_list:
             goods_id = int(i.get('goods_id', 0))
@@ -1551,7 +1551,7 @@ class Ad:
 
     def setc_ad(self):
         c_title = self.data.get('title','')
-        c_content = self.data.get('img','')
+        c_content = self.data.get('content','')
         c_img = self.data.get('img','')
 
         if len(c_title) == 0 or len(c_content) ==0:
