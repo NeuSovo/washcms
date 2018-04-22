@@ -73,8 +73,6 @@ def upload_single_file(file):
     info = requests.post('http://test-12345-1252731440.cos.ap-beijing.myqcloud.com/' + cos_path, files=f,data=http_body, headers=http_header)
     return info
 
-# print (upload_single_file('auth.py').text)
-
 
 
 

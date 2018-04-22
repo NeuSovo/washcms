@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 from cms.models import CodeRecord
+from django.conf import settings
 
 class CmsConfig(AppConfig):
     name = 'cms'
@@ -54,3 +55,11 @@ class RedisServerKey(object):
     """docstring for RedisServerKey"""
     month_store_report = '{store_id}_{month}_month_store_report'
     day_store_report = '{store_id}_{day}_day_store_report'
+
+class RedisExpireTime:
+    if settings.DEBUG:
+        redis_session = 600
+        redis_report = 60
+    else:
+        redis_session = 259200
+        redis_report = 600

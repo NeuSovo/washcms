@@ -94,9 +94,6 @@ class Store(models.Model):
         (0, '押金已付'),
         (1, '押金未付')
     )
-    area_level = []
-    # for i in DeliveryArea.area_all():
-    #     area_level.append([i.id, i.area_name])
 
     store_id = models.IntegerField(
         primary_key=True
@@ -280,7 +277,7 @@ class PeisongCarStock(models.Model):
     )
     goods = models.ForeignKey(
         Goods,
-        on_delete=models.CASCADE
+        on_delete=models.SET(-2)
     )
     goods_stock = models.IntegerField(
         default=0
@@ -297,20 +294,13 @@ class StoreGoods(models.Model):
         verbose_name = "商户货物"
         verbose_name_plural = "StoreGoodss"
 
-    store_level = []
-    goods_level = []
-    # for i in Store.store_all():
-    #     store_level.append([i.store_id,i.store_name])
-
-    # for i in Goods.goods_all():
-    #     goods_level.append([i.goods_id, i.goods_name])
     store = models.ForeignKey(
         Store,
         on_delete=models.CASCADE
     )
     goods = models.ForeignKey(
         Goods,
-        on_delete=models.CASCADE
+        on_delete=models.SET(-2)
     )
     goods_stock = models.IntegerField(
         default=0
@@ -319,12 +309,6 @@ class StoreGoods(models.Model):
         max_digits=8,
         decimal_places=3
     )
-    # goods_name = models.CharField(
-    #                 max_length=155
-    #             )
-    # goods_spec = models.IntegerField(
-    #                 default=1
-    #             )
 
 
 class Order(models.Model):
@@ -444,7 +428,7 @@ class OrderDetail(models.Model):
 
     goods = models.ForeignKey(
         Goods,
-        on_delete=models.CASCADE
+        on_delete=models.SET(-2)
     )
     goods_count = models.IntegerField()
     goods_price = models.DecimalField(
@@ -511,6 +495,7 @@ class PickOrder(models.Model):
         default=1
     )
     order_type = models.IntegerField(
+        choices=order_type_level,
         default=0
     )
     create_time = models.DateTimeField(
@@ -546,7 +531,7 @@ class PickOrderDetail(models.Model):
     order_id = models.BigIntegerField(null=True)
     goods = models.ForeignKey(
         Goods,
-        on_delete=models.CASCADE
+        on_delete=models.SET(-2)
     )
     goods_count = models.IntegerField()
 
@@ -628,7 +613,7 @@ class RecoverModelDetail(models.Model):
     )
     goods = models.ForeignKey(
         Goods,
-        on_delete=models.CASCADE
+        on_delete=models.SET(-2)
     )
 
     goods_count = models.IntegerField()

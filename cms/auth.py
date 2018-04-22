@@ -7,7 +7,7 @@ from cms.tools import *
 from django.http import JsonResponse
 from datetime import datetime, timedelta
 from cms.apps import APIServerErrorCode as ASEC
-
+from cms.apps import RedisExpireTime as ret
 
 app = logging.getLogger('app.custom')
 request_backup = logging.getLogger('app.backup')
@@ -95,7 +95,7 @@ class WechatSdk(object):
             return self.flush_session()
 
         sess = gen_hash()
-        redis_session.set(sess,self.openid,ex=259200)
+        redis_session.set(sess,self.openid,ex=ret.redis_session)
         user = User(wk=self.openid)
         user.save()
         # 自动为用户生成Profile
@@ -108,7 +108,7 @@ class WechatSdk(object):
 
     def flush_session(self):
         sess = gen_hash()
-        redis_session.set(sess,self.openid,ex=259200)
+        redis_session.set(sess,self.openid,ex=ret.redis_session)
         # 刷新Cookie成功
         return {'sess': sess,
                 'code': ASEC.FLUSH_SESSION_SUCCESS,
@@ -282,8 +282,9 @@ class UserManager(object):
                     i.delete()
                 to_delete.delete()
 
+            for i in redis_session.keys():
+                if redis_session.get(i).decode('utf-8') == user.wk:
+                    redis_session.delete(i)
         user.user_type = set_type
         user.save()
-
         return user
-

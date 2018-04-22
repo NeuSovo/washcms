@@ -1,5 +1,5 @@
 from django.contrib import admin
-from cms.models import CodeRecord, User, CustomerProfile, Store, DeliveryArea, Goods, Order, OrderDetail, StoreGoods,CustomerProfile,PeisongProfile,PickOrder
+from cms.models import *
 # Register your models here.
 
 
@@ -165,9 +165,18 @@ class PickOrderAdmin(admin.ModelAdmin):
         Admin View for PickOrder
     '''
 
-    list_display = ('order_status', 'create_time', 'pick_user', 'confirm_time')
+    list_display = ('order_status', 'create_time', 'pick_user', 'confirm_time', 'order_type')
 
 
+class PickOrderDetailAdmin(admin.ModelAdmin):
+    '''
+        Admin View for 
+    '''
+    def goods_name(self,storegoods):
+        return u'%s(%s)' % (storegoods.goods.goods_name,storegoods.goods.goods_spec)
+    list_display = ('order_id', 'goods_name', 'goods_count')
+
+admin.site.register(PickOrderDetail, PickOrderDetailAdmin)
 admin.site.register(PickOrder, PickOrderAdmin)
 admin.site.register(PeisongProfile, PeiSongUserAdmin)
 admin.site.register(CustomerProfile, StoreUserAdmin)

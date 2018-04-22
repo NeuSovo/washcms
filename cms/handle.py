@@ -17,6 +17,7 @@ from cms.auth import UserManager, LoginManager, WechatSdk
 
 app = logging.getLogger('app.custom')
 
+
 class AreaManager(object):
     def __init__(self, postdata):
         self.data = postdata
@@ -164,7 +165,7 @@ class StoreManager(object):
             return {'message': 'ok', 'new_info': new_info}
         except Exception as e:
             app.error(str(e) + '{}'.format(data))
-            return {'message': '保存失败 \n'+ str(e)}
+            return {'message': '保存失败 \n' + str(e)}
 
     def getprice_store(self):
         try:
@@ -212,7 +213,7 @@ class StoreManager(object):
                 this_goods.goods_price = goods_price
                 this_goods.save()
 
-        return {'message': 'ok','new_price': store.price()}
+        return {'message': 'ok', 'new_price': store.price()}
 
     @staticmethod
     def store_report_info(order_pool, recover_order_pool):
@@ -299,7 +300,7 @@ class StoreManager(object):
         try:
             for i in goods_pool:
                 # 押金跳过
-                if i.goods_id == -1:
+                if i.goods_id < 0:
                     continue
                 store_goods = StoreGoods.objects.get(
                     store=order.store, goods=i.goods,)
@@ -310,7 +311,7 @@ class StoreManager(object):
                     if new:
                         # 看实际情况再决定加不加
                         # return {'message': '车上没有此物品!'}
-                        raise e
+                        raise Exception("配送员车上没有此物品")
                     else:
                         car_goods = PeisongCarStock(
                             wk=ps_user, goods=i.goods, goods_type=goods_type)
@@ -318,6 +319,10 @@ class StoreManager(object):
                 goods_count = i.goods_count
                 if not new:
                     goods_count = -(i.goods_count)
+
+                # [TODO] 小于?
+                # if new and car_goods.goods_stock < goods_count:
+                #     raise Exception("库存不足，补货后再次确认")
 
                 car_goods.goods_stock -= goods_count
                 car_goods.save()
@@ -509,9 +514,9 @@ class GoodsManager(object):
             goods.save()
         except Exception as e:
             app.error(str(e))
-            return {'message' : '保存失败\n' + str(e)}
+            return {'message': '保存失败\n' + str(e)}
 
-        return {'message': 'ok','new_info': goods.info()}
+        return {'message': 'ok', 'new_info': goods.info()}
 
     def addstock_goods(self):
         goods_list = self.data.get('goods_list', list())
@@ -552,7 +557,7 @@ class GoodsManager(object):
 
         return_list = list()
         for i in goods_all:
-            if i.goods_id == -1:
+            if i.goods_id < 0:
                 continue
             return_list.append(i.info())
 
@@ -565,7 +570,7 @@ class GoodsManager(object):
 
     def reply(self):
         method_name = str(self.action) + '_goods'
-        is_all =  self.data.get('is_all', 0)
+        is_all = self.data.get('is_all', 0)
         if self.action == 'all':
             return GoodsManager.all_goods(is_all)
         try:
@@ -592,7 +597,7 @@ class OrderManager(object):
     def getclear_order(self):
         store = UserManager.get_user_store(self.user).store
         if redis_report.exists(store.store_id):
-            print ('_redis')
+            print('_redis')
             return eval(redis_report.get(store.store_id))
 
         return {'message': '暂时还没有提交清账订单'}
@@ -682,6 +687,12 @@ class OrderManager(object):
         if order_type == 3:
             if datetime.now() - order.create_time > max_cancel_minutes:
                 return {'message': '大于取消时间'}
+
+            # 如果第一笔有押金的订单取消，恢复押金未付状态！
+            if OrderDetail.objects.filter(order_id=order.order_id, 
+                                          goods=Goods.objects.get(goods_id=-1)).exists():
+                order.store.has_deposit = 1
+                order.store.save()
 
         # 待支付
         if order_type == 1:
@@ -924,7 +935,7 @@ class PeiSongManager(object):
         today = datetime.now()
         day = self.data.get('day', today.day)
 
-        key = str(self.ps_user) + '_'  + str(day) + '_day_order_report'
+        key = str(self.ps_user) + '_' + str(day) + '_day_order_report'
         if redis_report.exists(key):
             print('_redis')
             return eval(redis_report.get(key))
@@ -1020,13 +1031,11 @@ class PeiSongManager(object):
         old_info = list()
         goods_pool = PeisongCarStock.objects.filter(wk=self.ps_user)
         for i in goods_pool:
+            if i.goods_stock == 0:
+                continue
             if i.goods_type == 0:
-                if i.goods_stock == 0:
-                    continue
                 result.append(i.info())
             else:
-                if i.goods_stock == 0:
-                    continue
                 old_info.append(i.info())
 
         return {'message': 'ok',
@@ -1045,7 +1054,7 @@ class PeiSongManager(object):
 
         for i in info:
             goods_info = GoodsManager.get_goods_info(i.goods_id)
-            if i.goods_id == -1:
+            if i.goods_id < 0:
                 continue
             result.append({'goods_id': i.goods_id,
                            'goods_name': goods_info['goods_name'],
@@ -1155,10 +1164,10 @@ class KuGuanManager(object):
         return info
 
     def modify_pick(self):
-        order_id = int(self.data.get('order_id', 0))
+        order_id = self.data.get('order_id', 0)
 
         try:
-            order = PickOrder.objects.get(order_id=order_id)
+            order = PickOrder.objects.get(order_id=int(order_id))
         except:
             return {'message': '订单号错误'}
 
@@ -1167,7 +1176,7 @@ class KuGuanManager(object):
         for i in goods_list:
             try:
                 o = PickOrderDetail.objects.get(
-                    order_id=order_id, goods_id=i['goods_id'])
+                    order_id=order.order_id, goods_id=i['goods_id'])
             except Exception as e:
                 return {'message': 'goods_id({}) not exist'.format(i['goods_id'])}
             o.goods_count = i['goods_count']
@@ -1492,7 +1501,7 @@ class ClearAccount(object):
             e_time = datetime.strptime(self.data.get('e_time'), '%Y-%m-%d')
         except Exception:
             if redis_report.get(store_id):
-                print ('_redis')
+                print('_redis')
                 return eval(redis_report.get(store_id))
             else:
                 return {'message': '时间错误'}
@@ -1547,17 +1556,17 @@ class Ad:
         img_list = self.data['img_list']
         for i in img_list:
             AdBanner(b_img=i).save()
-        return {'message': 'ok','info': AdBanner.all()}
+        return {'message': 'ok', 'info': AdBanner.all()}
 
     def setc_ad(self):
-        c_title = self.data.get('title','')
-        c_content = self.data.get('content','')
-        c_img = self.data.get('img','')
+        c_title = self.data.get('title', '')
+        c_content = self.data.get('content', '')
+        c_img = self.data.get('img', '')
 
-        if len(c_title) == 0 or len(c_content) ==0:
+        if len(c_title) == 0 or len(c_content) == 0:
             return {'message': '标题或内容不能为空'}
 
-        AdContent(c_title=c_title,c_content=c_content,c_img=c_img).save()
+        AdContent(c_title=c_title, c_content=c_content, c_img=c_img).save()
 
         return {'message': 'ok', 'info': AdContent.all()}
 
