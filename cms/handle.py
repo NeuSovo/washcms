@@ -1571,9 +1571,9 @@ class Ad:
         return {'message': 'ok', 'info': AdContent.all()}
 
     def delc_ad(self):
-        id = int(self.data.get('id', 0))
+        id = self.data.get('id', 0)
         try:
-            ad = AdContent.objects.get(id=id)
+            ad = AdContent.objects.get(id=int(id))
         except:
             return {'message': 'id不存在'}
 
@@ -1581,9 +1581,9 @@ class Ad:
         return {'message': 'ok'}
 
     def delb_ad(self):
-        id = int(self.data.get('id', 0))
+        id = self.data.get('id', 0)
         try:
-            ad = AdBanner.objects.get(id=id)
+            ad = AdBanner.objects.get(id=int(id))
         except:
             return {'message': 'id不存在'}
 

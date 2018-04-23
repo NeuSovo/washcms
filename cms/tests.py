@@ -1,27 +1,18 @@
-from django.test import TestCase,Client
-from cms.models import User,Session
-from cms.handle import WechatSdk
-from django.conf import settings
 import random
 import time
 import json
-from hashlib import sha256, md5
-from datetime import datetime,timedelta
+from cms.models import User
+from django.test import TestCase,Client
 # Create your tests here.
 
-class AdminUserTestCase(TestCase):
-    wckey = ''
-    client = Client()
-    TOKEN = 'eq021n!3'
+class CompleteTest(TestCase):
+    """docstring for CompleteTest"""
 
     def setUp(self):
-        settings.DEBUG = False
-        wk = random.randint(10000,20000)
-        self.wckey = WechatSdk.gen_hash()
-        User.objects.create(wk=wk,user_type=0)
-        Session.objects.create(session_key=wk,session_data=self.wckey)
+        self.wckey =  'cdddd0bbd854a21ac7afdbd47b66c191483e6c9fcdf9cf2d7e115c8ad8ba0075'
+        User.objects.create(wk='debug_admin',user_type=0)
 
-    def test_normal_login_user(self):
+    def test_Complete(self):
         now_time = time.time()
 
         to_check_str = str(self.TOKEN) + str(now_time)
@@ -34,31 +25,5 @@ class AdminUserTestCase(TestCase):
 
         json_data = {'base_req':{'wckey':self.wckey},'sign':cc_str,'time':now_time }
         res = self.client.post('/auth/login',json.dumps(json_data), content_type="application/json")
-        self.assertEqual(res.status_code,200)
-
-        print (res.json())
-
-    def test_failed_token_login(self):
-        json_data = {'base_req':{'wckey':self.wckey},'sign':'cc_str','time':time.time()}
-        res = self.client.post('/auth/login',json.dumps(json_data), content_type="application/json")
-
-        self.assertEqual(res.json()['code'],1005)
-
-    def test_expire_time_login(self):
-        now_time = int(time.time())-int(6)
-
-        to_check_str = str(self.TOKEN) + str(now_time)
-        to_check_str = to_check_str.encode('utf-8')
-
-        m = md5()
-        m.update(to_check_str)
-
-        cc_str = m.hexdigest()
-
-        json_data = {'base_req':{'wckey':self.wckey},'sign':cc_str,'time':now_time}
-        res = self.client.post('/auth/login',json.dumps(json_data), content_type="application/json")
-
-        self.assertEqual(res.json()['code'],1005)
-
-    def test_store(self):
-        json_data = {'base_req':{'wckey':self.wckey},
+        self.assertEqual(res.json()['user_type'], 0)
+        
