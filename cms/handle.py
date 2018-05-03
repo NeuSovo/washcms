@@ -1507,7 +1507,7 @@ class ClearAccount(object):
                 return {'message': '时间错误'}
 
         order_pool = Order.objects.filter(
-            Q(order_type=1, create_time__gte=b_time, create_time__lt=e_time))
+            Q(order_type=1, receive_time__gte=b_time, receive_time__lt=e_time))
 
         info = list()
         total_price = 0
