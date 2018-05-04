@@ -1534,11 +1534,12 @@ class ClearAccount(object):
             data = eval(redis_report.get(store_id))
         else:
             return {'message': 'clear order expired'}
-
+        
         for i in data['info']:
             try:
-                order = Order.objects.get(order_id=i['order_id'])
-            except Exception:
+                order = Order.objects.get(order_id=i['order_info']['order_id'])
+            except Exception as e:
+                app.error(str(e))
                 return {'message': 'failed'}
             info = OrderManager.set_order_status(
                 order=order, order_type=0, pay_from=2)
