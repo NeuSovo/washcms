@@ -1056,10 +1056,8 @@ class PeiSongManager(object):
             goods_info = GoodsManager.get_goods_info(i.goods_id)
             if i.goods_id < 0:
                 continue
-            result.append({'goods_id': i.goods_id,
-                           'goods_name': goods_info['goods_name'],
-                           'goods_spec': goods_info['goods_spec'],
-                           'goods_count': int(i.goods_count)})
+            goods_info['goods_count'] = int(i.goods_count)
+            result.append(goods_info)
 
         return {'message': 'ok',
                 'info': result}
