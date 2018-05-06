@@ -1550,14 +1550,13 @@ class ClearAccount(object):
 class Ad:
     def __init__(self, postdata=None):
         self.data = postdata
-        self.key = 'ad:key'
 
     def setb_ad(self):
         img_list = self.data['img_list']
         for i in img_list:
             AdBanner(b_img=i).save()
 
-        self.flush_redis()
+        Ad.flush_redis()
         return {'message': 'ok', 'info': AdBanner.all()}
 
     def setc_ad(self):
@@ -1570,7 +1569,7 @@ class Ad:
 
         AdContent(c_title=c_title, c_content=c_content, c_img=c_img).save()
 
-        self.flush_redis()
+        Ad.flush_redis()
         return {'message': 'ok', 'info': AdContent.all()}
 
     def delc_ad(self):
@@ -1581,7 +1580,7 @@ class Ad:
             return {'message': 'id不存在'}
 
         ad.delete()
-        self.flush_redis()
+        Ad.flush_redis()
         return {'message': 'ok'}
 
     def delb_ad(self):
@@ -1592,7 +1591,7 @@ class Ad:
             return {'message': 'id不存在'}
 
         ad.delete()
-        self.flush_redis()
+        Ad.flush_redis()
         return {'message': 'ok'}
 
     @staticmethod
@@ -1600,15 +1599,17 @@ class Ad:
         if redis_report.exists('ad:key'):
             return eval(redis_report.get('ad:key'))
         else:
+            Ad.flush_redis()
             return {'message': 'ok',
                     'banner': AdBanner.all(),
                     'content': AdContent.all()}
 
-    def flush_redis(self):
+    @staticmethod
+    def flush_redis():
         try:
             info = {'message': 'ok',
                 'banner': AdBanner.all(),
                 'content': AdContent.all()}
-            redis_report.set(self.key,info)
+            redis_report.set('ad:key',info)
         except Exception as e:
             app.error(str(e))
