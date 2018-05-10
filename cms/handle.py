@@ -802,7 +802,7 @@ class PeiSongManager(object):
 
         order_pool = Order.objects.filter(area=self.area, order_type=2)
 
-        for i in order_pool:
+        for i in order_pool.iterator():
             peisong_detail = PeiSongManager.get_peisong_order_info(i)
 
             info.append(peisong_detail)

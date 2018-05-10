@@ -62,6 +62,9 @@ class User(models.Model):
     def __len__(self):
         return len(User.user_all())
 
+    def __str__(self):
+        return u'%s:%s' % (self.wk, self.user_type)
+
 
 class DeliveryArea(models.Model):
 

@@ -31,7 +31,7 @@ urlpatterns = [
     path('ad', ad_view),
     path('ad/<str:action>', set_ad_view),
 
-    path('tools/qrcode/<str:data>', qrcode_view),
+    path('tools/qrcode/<path:data>', qrcode_view),
     path('tools/sign', tools_sign),
 
     path('boss/area', change_deliveryarea_view),
