@@ -148,6 +148,8 @@ class Store(models.Model):
         all_store_price = StoreGoods.objects.filter(store=self)
         result = []
         for i in all_store_price:
+            if i.goods.id <= 0:
+                continue
             t_info = i.goods.info()
             t_info['goods_price'] = float(i.goods_price)
             t_info['goods_store_stock'] = i.goods_stock
