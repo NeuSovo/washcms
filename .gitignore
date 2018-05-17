@@ -1,0 +1,8 @@
+__pycache__
+migrations
+.idea
+*.log
+/*.json
+/tmp.py
+static
+*.sql
