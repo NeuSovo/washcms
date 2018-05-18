@@ -1,9 +1,10 @@
-from base64 import standard_b64encode as b64encode
-from datetime import date
-import requests
+import redis
+# from base64 import standard_b64encode as b64encode
+# from datetime import date
+# import requests
 
-
-
+# parser a quene TVmao
+"""
 class TvmaoParser(HTMLParser):
 
     epg_set = None
@@ -97,7 +98,6 @@ class TvmaoParser(HTMLParser):
                     self.program = ''
                 return
 
-
     def handle_data(self, data):
         if not data.strip():
             return
@@ -114,3 +114,49 @@ class TvmaoParser(HTMLParser):
         s3 = b64encode(('|%s' % self.q).encode()).decode()
 
         return ''.join([s1, s2, s3])
+"""
+
+class RedisQueue:
+    """docstring for RedisQueue"""
+
+    def __init__(self, name=None, namespace='queue', **redis_kwagrs):
+        super(RedisQueue, self).__init__()
+        self._key = '%s:%s' % (namespace, name)
+        self.__db = redis.Redis(**redis_kwagrs)
+
+    def qsize(self):
+        return self.__db.llen(self._key)
+
+    def empty(self):
+        return self.qsize() == 0
+
+    def get(self, block=True, timeout=None):
+        "if not block, unitl an item is available"
+        if block:
+            item = self.__db.blpop(self._key, timeout=timeout)
+        else:
+            item = self.__db.lpop(self._key)
+        
+        if item:
+            item = item[1]
+
+        return item
+
+    def put(self, item):
+        return self.__db.rpush(self._key, item)
+
+    def get_nowait(self):
+        return self.get(False)
+
+    def __len__(self):
+        return self.qsize() 
+
+redis_kwagrs = {
+    'host': 'localhost',
+    'port': 6379,
+    'db': 0
+}
+
+# queue = RedisQueue(name='test', **redis_kwagrs)
+
+# print (queue.qsize())
