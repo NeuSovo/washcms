@@ -8,8 +8,8 @@ from hashlib import sha256, md5
 from django.conf import settings
 from django.utils.six import BytesIO
 
-APPID = 'wx5c7d55175f3872b7'
-SECRET = '6050b3ca9c9b3823768ae1867ef9036e'
+APPID = 'wxb4ded851965b77eb'
+SECRET = '5c4a6e4a8f8aa560dd8c3eff6536576f'
 redis_report = redis.StrictRedis(host='127.0.0.1', port=6379, db=0)
 redis_session = redis.StrictRedis(host='127.0.0.1', port=6379, db=1)
 
