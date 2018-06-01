@@ -52,8 +52,8 @@ def usercheck(user_type=-1):
             user = User.objects.get(wk=str(wk))
 
             body.pop('base_req')
-            request_backup.info("[{fun_name}][{action}][{user}][{body}]".format(
-                                fun_name=func.__name__,action=request.path,
+            request_backup.info("[{action}][{user}][{body}]".format(
+                                action=request.path,
                                 user=str(user),body=body))
 
             if user_type == -1 or user.user_type <= user_type:
