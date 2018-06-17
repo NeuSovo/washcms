@@ -675,7 +675,7 @@ class OrderManager(object):
         return {'message': 'ok', 'order_id': order_id}
 
     @staticmethod
-    def set_order_status(order, order_type, pay_from=None, ps_user=None):
+    def set_order_status(order, order_type, pay_from=None, ps_user=None, done_user=None):
         max_cancel_minutes = timedelta(minutes=15)
         order_type = int(order_type)
 
@@ -1545,6 +1545,10 @@ class ClearAccount(object):
                 return info
         redis_report.delete(store_id)
         return info
+
+    def detail_clear():
+        # [TODO] return all clear detail and confirm user
+        pass
 
 
 class Ad:

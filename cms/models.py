@@ -420,6 +420,12 @@ class Order(models.Model):
         null=True,
         blank=True
     )
+    done_user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True
+    )
 
 
 class OrderDetail(models.Model):
