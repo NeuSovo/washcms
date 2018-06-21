@@ -63,7 +63,7 @@ class User(models.Model):
         return len(User.user_all())
 
     def __str__(self):
-        return u'%s:%s' % (self.wk, self.user_type)
+        return self.nick_name
 
 
 class DeliveryArea(models.Model):
@@ -175,6 +175,9 @@ class CustomerProfile(models.Model):
         on_delete=models.CASCADE
     )
 
+    def __str__(self):
+        return str(self.wk)
+
 
 class PeisongProfile(models.Model):
 
@@ -200,7 +203,7 @@ class PeisongProfile(models.Model):
     )
 
     def __str__(self):
-        return '{}'.format(self.wk.wk)
+        return str(self.wk)
 
 
 class Goods(models.Model):
@@ -336,7 +339,10 @@ class Order(models.Model):
             'receive_time': str(self.receive_time),
             'pay_from': self.pay_from,
             'remarks': self.order_remarks,
-            'done_time': str(self.done_time)
+            'done_time': str(self.done_time),
+            'ps_user':str(self.ps_user),
+            'create_user': str(self.user),
+            'done_user': str(self.done_user) if self.done_user else 'None'
         }
 
     def goods_info(self):
@@ -560,8 +566,11 @@ class RecoverOrder(models.Model):
     def info(self):
         return {
             'order_id': str(self.order_id),
+            'order_type': self.order_type,
             'create_time': str(self.create_time),
             'create_timestamp': time.mktime(self.create_time.timetuple()),
+            'ps_user': str(self.ps_user),
+            'receive_time': self.receive_time,
             'store_name': self.store.store_name,
             'store_phone': self.store.store_phone,
             'store_addr': self.store.store_addr,

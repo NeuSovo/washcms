@@ -259,7 +259,7 @@ def boos_report_store_view(request, user, body, day=None, month=None):
 
 @usercheck(user_type=0)
 def clear_account_view(request, body, action=None, user=None):
-    clear = ClearAccount(postdata=body)
+    clear = ClearAccount(postdata=body, user=user)
     try:
         method_name = action + '_clear'
         result = getattr(clear, method_name)

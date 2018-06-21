@@ -13,6 +13,7 @@ from django.conf import settings
 
 from cms.apps import APIServerErrorCode as ASEC
 from cms.auth import UserManager, LoginManager, WechatSdk
+from cms.exceptions import *
 
 
 app = logging.getLogger('app.custom')
@@ -26,9 +27,8 @@ class AreaManager(object):
         try:
             new_area = DeliveryArea(area_name=self.data['name'])
             new_area.save()
-        except Exception:
-            app.info(Exception("add_area Type Errror"))
-            return {'message': '错误参数'}
+        except Exception as e:
+            return {'message': "添加失败"}
 
         return {'message': 'ok', 'id': new_area.id}
 
@@ -52,7 +52,7 @@ class AreaManager(object):
         area_id = int(self.data.get('id', 0))
         try:
             area = DeliveryArea.objects.get(id=area_id)
-        except Exception:
+        except Exception as e:
             return {'message': '区域id不存在'}
 
         area.area_name = self.data['name']
@@ -85,7 +85,7 @@ class StoreManager(object):
         try:
             Store.objects.get(store_id=store_id)
             return True
-        except Exception:
+        except Exception as e:
             return False
 
     @staticmethod
@@ -110,8 +110,6 @@ class StoreManager(object):
         has_deposit = 1 if deposit else 0
         new_store = Store(store_id=store_id,
                           store_name=name,
-                          # store_phone=data['phone'],
-                          # store_addr=data['addr'],
                           store_area=area,
                           store_pay_type=pay_type,
                           store_deposit=deposit,
@@ -180,7 +178,7 @@ class StoreManager(object):
         try:
             price_list = self.data['goods_list']
             store_id = int(self.data['store_id'])
-        except Exception:
+        except Exception as e:
             return {'message': '参数错误'}
 
         try:
@@ -243,6 +241,10 @@ class StoreManager(object):
         if month <= 0 or month > 12:
             month = today.month
 
+        version = self.data.get('version', 0)
+        if version:
+            return self.new_month_store_report(user_store, month)
+
         key = str(user_store.store_id) + '_' + \
             str(month) + '_month_store_report'
         # Redis
@@ -264,6 +266,24 @@ class StoreManager(object):
             redis_report.set(key, result, ex=600)
 
         return result
+
+    def new_month_store_report(self, month):
+        store = UserManager.get_user_store(self.user).store
+        order_pool = Order.objects.filter(store=store, create_time__month=month)
+        recover_order_pool = RecoverOrder.objects.filter(store=store, create_time__month=month)
+
+        res = dict()
+        order_list = list()
+        recover_order_list = list()
+        for i in order_pool.iterator():
+            order_list.append(i.info())
+        for i in recover_order_pool.iterator():
+            recover_order_list.append(i.info())
+
+        res['message'] = 'ok'
+        res['order'] = order_list
+        res['recover_order'] = recover_order_list
+        return res
 
     @staticmethod
     def get_last_pay_time(store):
@@ -1237,7 +1257,7 @@ class RecoverManager(object):
     @staticmethod
     def get_recover_order_info(order):
         return {'order_info': order.info(),
-                'goods_lnfo': order.goods_info()}
+                'goods_info': order.goods_info()}
 
     def cancel_recover_order(self):
         order_id = self.order_id
@@ -1269,6 +1289,11 @@ class RecoverManager(object):
         return {'message': 'ok',
                 'info': info}
 
+    def detail_recover_order(self):
+        recover_order = RecoverModelDetail.objects.get(order_id=self.order_id)
+        return {'message': 'ok',
+                'info': RecoverManager.get_recover_order_info(recover_order)}
+
 
 class BoosReport(object):
     """docstring for BoosReport"""
@@ -1276,9 +1301,9 @@ class BoosReport(object):
     def __init__(self, postdata=None, user=None):
         self.data = postdata
         self.today = datetime.now()
+        self.user = user
 
-    def day_order_report(self):
-        day = self.data.get('day', self.today.day)
+    def get_ps_user(self):
         ps_user_uid = self.data.get('uid', None)
         ps_user = None
         if ps_user_uid:
@@ -1287,6 +1312,15 @@ class BoosReport(object):
                 ps_user = PeisongProfile.objects.get(wk=ps_user)
             except Exception:
                 ps_user = None
+
+        return ps_user
+
+    def day_order_report(self):
+        day = self.data.get('day', self.today.day)
+        if self.data.get('version', 0):
+            return self.new_day_order_report()
+
+        ps_user = self.get_ps_user()
 
         # Redis
         key = str(ps_user) + '_' + str(day) + '_day_order_report'
@@ -1319,20 +1353,58 @@ class BoosReport(object):
 
         return result
 
+    def new_day_order_report(self):
+        day = self.data.get('day', self.today.day)
+        ps_user = self.get_ps_user()
+        if ps_user:
+            order_pool = Order.objects.filter(~Q(order_type=3),
+                                              Q(ps_user=ps_user),
+                                              Q(create_time__month=self.today.month),
+                                              Q(create_time__day=day))
+            recover_order_pool = RecoverOrder.objects.filter(~Q(ps_user=ps_user),
+                                                             Q(create_time__month=self.today.month),
+                                                             Q(create_time__day=day))
+        else:
+            order_pool = Order.objects.filter(~Q(order_type=3),
+                                              Q(create_time__month=self.today.month),
+                                              Q(create_time__day=day))
+            recover_order_pool = RecoverOrder.objects.filter(~Q(order_type=2),
+                                                             Q(ps_user=ps_user),
+                                                             Q(create_time__month=self.today.month),
+                                                             Q(create_time__day=day))
+
+        return BoosReport.response(order_pool, recover_order_pool, day=day, month=self.today.month)
+
+    @staticmethod
+    def response(order_pool, recover_order_pool, day=None, month=None):
+        res = dict()
+        order_list = list()
+        recover_order_list = list()
+        for i in order_pool.iterator():
+            order_list.append(i.info())
+
+        for i in recover_order_pool.iterator():
+            recover_order_list.append(i.info())
+
+        res['message'] = 'ok'
+        res['order'] = order_list
+        res['recover_order'] = recover_order_list
+        if day:
+            res['day'] = day
+        if month:
+            res['month'] = month
+
+        return res
+
     def month_order_report(self):
         month = self.data.get('month', self.today.month)
+        if self.data.get('version', 0):
+            return self.new_month_order_report()
 
         if month <= 0 or month > 12:
-            month = today.month
+            month = self.today.month
 
-        ps_user_uid = self.data.get('uid', None)
-        ps_user = None
-        if ps_user_uid:
-            try:
-                ps_user = de_base64(ps_user_uid)
-                ps_user = PeisongProfile.objects.get(wk=ps_user)
-            except Exception:
-                ps_user = None
+        ps_user = self.get_ps_user()
         # Redis
         key = str(ps_user) + '_' + str(month) + '_day_order_report'
         if redis_report.exists(key):
@@ -1360,16 +1432,35 @@ class BoosReport(object):
 
         return result
 
+    def new_month_order_report(self):
+        month = self.data.get('month', self.today.month)
+
+        if month <= 0 or month > 12:
+            month = self.today.month
+        ps_user = self.get_ps_user()
+
+        if ps_user:
+            order_pool = Order.objects.filter(~Q(order_type=3),
+                                              Q(ps_user=ps_user),
+                                              Q(create_time__month=month))
+            recover_order_pool = RecoverOrder.objects.filter(~Q(order_type=2),
+                                                             ~Q(ps_user=ps_user),
+                                                             Q(create_time__month=month))
+        else:
+            order_pool = Order.objects.filter(~Q(order_type=3),
+                                              Q(create_time__month=month))
+            recover_order_pool = RecoverOrder.objects.filter(~Q(order_type=2),
+                                                             Q(ps_user=ps_user),
+                                                             Q(create_time__month=month))
+
+        return BoosReport.response(order_pool, recover_order_pool, month=month)
+
     def day_stock_report(self):
         day = self.data.get('day', self.today.day)
-        ps_user_uid = self.data.get('uid', None)
-        ps_user = None
-        if ps_user_uid:
-            try:
-                ps_user = de_base64(ps_user_uid)
-                ps_user = PeisongProfile.objects.get(wk=ps_user)
-            except Exception:
-                ps_user = None
+        if self.data.get('version', 0):
+            return self.new_day_stock_report()
+
+        ps_user = self.get_ps_user()
 
         # 如果存在redis缓存 直接返回
         key = str(ps_user) + '_' + str(day) + '_day_stock_report'
@@ -1392,20 +1483,26 @@ class BoosReport(object):
             print('new_redis')
         return info
 
+    def new_day_stock_report(self):
+        day = self.data.get('day', self.today.day)
+        ps_user = self.get_ps_user()
+        if ps_user:
+            pick_pool = PickOrder.objects.filter(pick_user=ps_user,
+                                                 create_time__month=self.today.month,
+                                                 create_time__day=day)
+        else:
+            pick_pool = PickOrder.objects.filter(create_time__month=self.today.month,
+                                                 ccreate_time__day=day)
+        return BoosReport.response_pick(pick_pool)
+
     def month_stock_report(self):
         month = self.data.get('month', self.today.month)
         if month <= 0 or month > 12:
-            month = today.month
+            month = self.today.month
+        if self.data.get('version', 0):
+            return self.new_month_stock_report()
 
-        ps_user_uid = self.data.get('uid', None)
-        ps_user = None
-
-        if ps_user_uid:
-            try:
-                ps_user = de_base64(ps_user_uid)
-                ps_user = PeisongProfile.objects.get(wk=ps_user)
-            except Exception as e:
-                ps_user = None
+        ps_user = self.get_ps_user()
 
         # 如果存在redis缓存 直接返回
         key = str(ps_user) + '_' + str(month) + '_month_stock_report'
@@ -1427,12 +1524,37 @@ class BoosReport(object):
             print('new_redis')
         return info
 
+    def new_month_stock_report(self):
+        month = self.data.get('month', self.today.month)
+        if month <= 0 or month > 12:
+            month = self.today.month
+
+        ps_user = self.get_ps_user()
+        if ps_user:
+            pick_pool = PickOrder.objects.filter(pick_user=ps_user,
+                                                 create_time__month=month)
+        else:
+            pick_pool = PickOrder.objects.filter(create_time__month=month)
+        
+        return BoosReport.response_pick(pick_pool)
+
+    @staticmethod
+    def response_pick(pick_pool):
+        res = dict()
+        pick_order = list()
+        for i in pick_pool.iterator():
+            pick_order.append(i.info)
+
+        res['message'] = 'ok'
+        res['pick_order'] = pick_order
+        return res
+
     def month_store_report(self):
         month = self.data.get('month', self.today.month)
         store_id = self.data.get('store_id', None)
 
         if month <= 0 or month > 12:
-            month = today.month
+            month = self.today.month
 
         if store_id:
             try:
@@ -1467,13 +1589,41 @@ class BoosReport(object):
 
         return result
 
+    def new_month_store_report(self):
+        month = self.data.get('month', self.today.month)
+        store_id = self.data.get('store_id', None)
+        if month <= 0 or month > 12:
+            month = self.today.month
+
+        if store_id:
+            try:
+                store = Store.objects.get(store_id=store_id)
+            except Exception as e:
+                store = None
+
+        if store:
+            order_pool = Order.objects.filter(~Q(order_type=3),
+                                              Q(store=store),
+                                              Q(create_time__month=month))
+            recover_order_pool = RecoverOrder.objects.filter(~Q(order_type=2),
+                                                             ~Q(store=store),
+                                                             Q(create_time__month=month))
+        else:
+            order_pool = Order.objects.filter(~Q(order_type=3),
+                                              Q(create_time__month=month))
+            recover_order_pool = RecoverOrder.objects.filter(~Q(order_type=2),
+                                                             Q(create_time__month=month))
+
+        return BoosReport.response(order_pool, recover_order, month=month)
+
 
 class ClearAccount(object):
     """docstring for ClearAccount"""
 
-    def __init__(self, postdata=None, key=None):
+    def __init__(self, postdata=None, key=None, user=None):
         self.key = key
         self.data = postdata
+        self.confirm_user = user;
 
     def getmonth_clear(self):
         info = list()
@@ -1543,10 +1693,12 @@ class ClearAccount(object):
                 order=order, order_type=0, pay_from=2)
             if info['message'] != 'ok':
                 return info
+
         redis_report.delete(store_id)
+
         return info
 
-    def detail_clear():
+    def detail_clear(self):
         # [TODO] return all clear detail and confirm user
         pass
 
