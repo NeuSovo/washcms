@@ -257,6 +257,25 @@ def boos_report_store_view(request, user, body, day=None, month=None):
     return response
 
 
+@usercheck(user_type=2)
+def boos_report_detail_view(request, user, body, order_id=None):
+    if order_id:
+        body['order_id'] = order_id
+    report = BoosReport(user=user, postdata=body)
+
+    try:
+        method_name = 'detail_report'
+        result = getattr(report, method_name)
+    except AttributeError as e:
+        response = HttpResponse()
+        response.status_code = 404
+        return response
+
+    response = parse_info(result())
+
+    return response
+
+
 @usercheck(user_type=0)
 def clear_account_view(request, body, action=None, user=None):
     clear = ClearAccount(postdata=body, user=user)

@@ -51,6 +51,9 @@ urlpatterns = [
     path('boss/report/store/month', boos_report_store_view),
     path('boss/report/store/month/<int:month>', boos_report_store_view),
 
+    path('staff/order/detail', boos_report_detail_view),
+    path('staff/order/detail/<str:order_id>', boos_report_detail_view),
+
     path('user/bind', bind_user_view),
     path('user/order', order_view),
     path('user/getgoods', get_user_goods_view),

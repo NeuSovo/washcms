@@ -608,8 +608,8 @@ class OrderManager(object):
         self.user = user
 
     @staticmethod
-    def gen_order_id():
-        order_id = datetime.now().strftime("%Y%m%d%H%M%S") + \
+    def gen_order_id(otype = 0):
+        order_id = datetime.now().strftime("%Y%m%d%H%M%S") + str(otype) + \
             str(random.randint(1000, 9999))
 
         return order_id
@@ -624,7 +624,7 @@ class OrderManager(object):
 
     def save_order(self):
         user = self.user
-        order_id = OrderManager.gen_order_id()
+        order_id = OrderManager.gen_order_id(0)
         store = UserManager.get_user_store(user).store
         area = store.store_area
         remarks = self.data['remarks']
@@ -728,8 +728,8 @@ class OrderManager(object):
             if pay_from is None:
                 return {'message': 'failed'}
 
-            if order.pay_type == 1 and pay_from != 2:
-                return {'message': '月结订单支付方式只能是月结'}
+            # if order.pay_type == 1 and pay_from != 2:
+            #     return {'message': '月结订单支付方式只能是月结'}
 
             order.pay_from = pay_from
 
@@ -1083,7 +1083,7 @@ class PeiSongManager(object):
                 'info': result}
 
     def new_pick(self):
-        order_id = OrderManager.gen_order_id()
+        order_id = OrderManager.gen_order_id(2)
         pick_user = PeisongProfile.objects.get(wk=self.user)
 
         def save_pick_detail(order_id, goods_list):
@@ -1215,7 +1215,7 @@ class RecoverManager(object):
         self.order_id = int(kwargs.get('order_id', 0))
 
     def new_recover_order(self):
-        order_id = OrderManager.gen_order_id()
+        order_id = OrderManager.gen_order_id(1)
 
         def save_recover_detail(order_id, goods_list):
             recover_all_goods = list()
@@ -1618,6 +1618,44 @@ class BoosReport(object):
 
         return BoosReport.response(order_pool, recover_order_pool, month=month)
 
+    def detail_report(self):
+        order_id = self.data.get('order_id', 111111)
+        order_t = int(str(order_id)[-5])
+        if order_t == 0:
+            try:
+                order = Order.objects.get(order_id=order_id)
+            except Exception as e:
+                return {'message': '订单号错误'}
+
+            order_info = order.info()
+
+            order_goods = order.goods_info()
+            return {'message': 'ok',
+                    'info': order_info,
+                    'goods': order_goods}
+
+        if order_t == 1:
+            try:
+                order = RecoverOrder.objects.get(order_id=order_id)
+            except Exception as e:
+                return {'message': '订单号错误'}
+            info = RecoverManager.get_recover_order_info(order)
+            return {'message': 'ok',
+                    'info': info['order_info'],
+                    'goods': info['goods_info']}
+
+        if order_t == 2:
+            try:
+                order = PickOrder.objects.get(order_id=order_id)
+            except Exception as e:
+                return {'message': '订单号错误'}
+            info = PeiSongManager.get_pick_order_info(order)
+            return {'message': 'ok',
+                    'info': info['order_info'],
+                    'goods': info['goods_info']}
+
+        return {'message': 'ok?'}
+
 
 class ClearAccount(object):
     """docstring for ClearAccount"""
@@ -1625,7 +1663,7 @@ class ClearAccount(object):
     def __init__(self, postdata=None, key=None, user=None):
         self.key = key
         self.data = postdata
-        self.confirm_user = user;
+        self.confirm_user = user
 
     def getmonth_clear(self):
         info = list()
@@ -1680,6 +1718,8 @@ class ClearAccount(object):
         except Exception:
             return {'message': '商户id不存在'}
 
+        pay_from = int(self.data.get('pay_from', 0)) # 0 RMB 1 Online
+
         if redis_report.exists(store_id):
             data = eval(redis_report.get(store_id))
         else:
@@ -1692,17 +1732,35 @@ class ClearAccount(object):
                 app.error(str(e))
                 return {'message': 'failed'}
             info = OrderManager.set_order_status(
-                order=order, order_type=0, pay_from=2)
+                order=order, order_type=0, pay_from=pay_from)
             if info['message'] != 'ok':
                 return info
 
         redis_report.delete(store_id)
+        history_key = ':'.join(['cleardone', str(store_id)])
+        _info = {
+            'clear_time': datetime.now(),
+            'clear_user': str(self.user),
+            'clear_type': pay_from,
+            'store_id': store_id,
+            'begin_date': data['info'][0]['order_info']['create_time'],
+            'end_date': data['info'][-1]['order_info']['create_time']
+        }
+        redis_report.set(history_key, _info, ex=604800)
 
         return info
 
-    def detail_clear(self):
+    def history_clear(self):
         # [TODO] return all clear detail and confirm user
-        pass
+        res = {}
+        info = list()
+        keys_pool = redis_report.keys('cleardone:*')
+        for i in keys_pool:
+            info.append(i.info())
+        res['message'] = 'ok'
+        res['info'] = info
+
+        return res
 
 
 class Ad:
