@@ -1492,7 +1492,7 @@ class BoosReport(object):
                                                  create_time__day=day)
         else:
             pick_pool = PickOrder.objects.filter(create_time__month=self.today.month,
-                                                 ccreate_time__day=day)
+                                                 create_time__day=day)
         return BoosReport.response_pick(pick_pool)
 
     def month_stock_report(self):
@@ -1543,19 +1543,21 @@ class BoosReport(object):
         res = dict()
         pick_order = list()
         for i in pick_pool.iterator():
-            pick_order.append(i.info)
+            pick_order.append(i.info())
 
         res['message'] = 'ok'
         res['pick_order'] = pick_order
         return res
 
     def month_store_report(self):
+        if self.data.get('version', 0):
+            return self.new_month_store_report()
         month = self.data.get('month', self.today.month)
         store_id = self.data.get('store_id', None)
 
         if month <= 0 or month > 12:
             month = self.today.month
-
+        store = None
         if store_id:
             try:
                 store = Store.objects.get(store_id=store_id)
@@ -1594,7 +1596,7 @@ class BoosReport(object):
         store_id = self.data.get('store_id', None)
         if month <= 0 or month > 12:
             month = self.today.month
-
+        store = None
         if store_id:
             try:
                 store = Store.objects.get(store_id=store_id)
@@ -1614,7 +1616,7 @@ class BoosReport(object):
             recover_order_pool = RecoverOrder.objects.filter(~Q(order_type=2),
                                                              Q(create_time__month=month))
 
-        return BoosReport.response(order_pool, recover_order, month=month)
+        return BoosReport.response(order_pool, recover_order_pool, month=month)
 
 
 class ClearAccount(object):
