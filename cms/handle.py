@@ -921,7 +921,9 @@ class PeiSongManager(object):
         pick_order_sum = 0
         recover_order_sum = 0
         goods_sum = list()
+        recover_goods_sum = list()
         goods_sum_tmp = {}
+        recover_goods_sum_tmp = {}
         order_info = list()
 
         for i in pick_pool.iterator():
@@ -929,9 +931,15 @@ class PeiSongManager(object):
             recover_order_sum += i.order_type
             for j in goods_info:
                 try:
-                    goods_sum_tmp[j['goods_id']] += j['goods_count']
+                    if i.order_type:
+                        recover_goods_sum_tmp[j['goods_id']] += j['goods_count']
+                    else:
+                        goods_sum_tmp[j['goods_id']] += j['goods_count']
                 except Exception:
-                    goods_sum_tmp[j['goods_id']] = j.pop('goods_count')
+                    if i.order_type:
+                        recover_goods_sum_tmp[j['goods_id']] = j.pop('goods_count')
+                    else:
+                        goods_sum_tmp[j['goods_id']] = j.pop('goods_count')
 
             order_info.append({'info': i.info(), 'goods_info': goods_info})
 
@@ -941,11 +949,19 @@ class PeiSongManager(object):
                               'goods_name': goods.goods_name,
                               'goods_spec': goods.goods_spec,
                               'goods_count': goods_sum_tmp[i]})
+
+        for i in recover_goods_sum_tmp:
+            goods = Goods.objects.get(goods_id=i)
+            recover_goods_sum.append({'goods_id': i,
+                              'goods_name': goods.goods_name,
+                              'goods_spec': goods.goods_spec,
+                              'goods_count': goods_sum_tmp[i]})
         info = {
             'message': 'ok',
             'pick_order_sum': len(pick_pool)-recover_order_sum,
             'recover_order_sum': recover_order_sum,
             'goods_sum': goods_sum,
+            'recover_goods_sum': recover_goods_sum,
             'order_info': order_info,
         }
 
@@ -1746,6 +1762,7 @@ class ClearAccount(object):
             'begin_date': data['info'][0]['order_info']['create_time'],
             'end_date': data['info'][-1]['order_info']['create_time']
         }
+        info['info'] = _info
         redis_report.set(history_key, _info, ex=604800)
 
         return info
