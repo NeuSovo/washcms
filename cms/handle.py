@@ -1140,17 +1140,18 @@ class PeiSongManager(object):
         return info
 
     def get_pick(self):
-        # filter all order
-        # todo order_type = 1
         info = list()
+        index = self.data.get('index',0)
         pick_user = PeisongProfile.objects.get(wk=self.user)
         order_pool = PickOrder.objects.filter(pick_user=pick_user)
+        has_more = len(order_pool[index+20:]) == 0
 
-        for i in order_pool:
+        for i in order_pool[index:index+20]:
             info.append(PeiSongManager.get_pick_order_info(i))
 
         return {'message': 'ok',
-                'info': info}
+                'info': info,
+                'has_more': has_more}
 
 
 class KuGuanManager(object):
@@ -1161,7 +1162,8 @@ class KuGuanManager(object):
         self.user = user
 
     def get_pick(self):
-        order_pool = PickOrder.objects.filter(order_status=1)
+        status = self.data.get('status', 1)
+        order_pool = PickOrder.objects.filter(order_status=status)
         info = list()
         for i in order_pool:
             t_info = PeiSongManager.get_pick_order_info(i)
