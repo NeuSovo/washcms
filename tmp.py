@@ -1,11 +1,11 @@
 import redis
-# from base64 import standard_b64encode as b64encode
-# from datetime import date
-# import requests
+from base64 import standard_b64encode as b64encode
+from datetime import date
+import requests
 
 # parser a quene TVmao
-"""
-class TvmaoParser(HTMLParser):
+
+class TvmaoParser():
 
     epg_set = None
 
@@ -114,10 +114,10 @@ class TvmaoParser(HTMLParser):
         s3 = b64encode(('|%s' % self.q).encode()).decode()
 
         return ''.join([s1, s2, s3])
-"""
 
+
+"""
 class RedisQueue:
-    """docstring for RedisQueue"""
 
     def __init__(self, name=None, namespace='queue', **redis_kwagrs):
         super(RedisQueue, self).__init__()
@@ -160,3 +160,4 @@ redis_kwagrs = {
 # queue = RedisQueue(name='test', **redis_kwagrs)
 
 # print (queue.qsize())
+"""
