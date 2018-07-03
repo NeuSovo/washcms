@@ -1144,7 +1144,7 @@ class PeiSongManager(object):
         index = self.data.get('index',0)
         pick_user = PeisongProfile.objects.get(wk=self.user)
         order_pool = PickOrder.objects.filter(pick_user=pick_user)
-        has_more = len(order_pool[index+20:]) == 0
+        has_more = len(order_pool[index+20:]) != 0
 
         for i in order_pool[index:index+20]:
             info.append(PeiSongManager.get_pick_order_info(i))
