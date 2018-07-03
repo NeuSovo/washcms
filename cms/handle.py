@@ -849,7 +849,7 @@ class PeiSongManager(object):
         order_pool = Order.objects.filter(area=self.area, pay_type=1, order_type=1) | order_pool # 月结
 
         for i in order_pool:
-            info.append(i.info())
+            info.append(PeiSongManager.get_peisong_order_info(i))
 
         result['message'] = 'ok'
         result['info'] = info
