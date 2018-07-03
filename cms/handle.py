@@ -846,7 +846,7 @@ class PeiSongManager(object):
         info = list()
 
         order_pool = Order.objects.filter(area=self.area, order_type=0)
-        order_pool = Order.objects.filter(area=self.area, pay_typ=1, order_type=1) | order_pool # 月结
+        order_pool = Order.objects.filter(area=self.area, pay_type=1, order_type=1) | order_pool # 月结
 
         for i in order_pool:
             info.append(i.info())
