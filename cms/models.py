@@ -241,7 +241,8 @@ class Goods(models.Model):
         max_length=155,
         default='not name'
     )
-    goods_spec = models.IntegerField(
+    goods_spec = models.CharField(
+        max_length=255,
         default=0
     )
     goods_stock = models.IntegerField(

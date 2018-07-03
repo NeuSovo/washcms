@@ -505,7 +505,7 @@ class GoodsManager(object):
 
     def add_goods(self):
         goods_name = self.data['name']
-        goods_spec = int(self.data.get('spec', 1))
+        goods_spec = self.data.get('spec', '0')
         goods_stock = int(self.data.get('stock', 0))
         goods_img = self.data.get('goods_img', '0')
         is_recover = int(self.data.get('recover', 0))
@@ -524,7 +524,7 @@ class GoodsManager(object):
     def change_goods(self):
         goods_id = self.data.get('goods_id', 0)
         goods_name = self.data['name']
-        goods_spec = int(self.data.get('spec', 1))
+        goods_spec = self.data.get('spec', '0')
         goods_img = self.data.get('goods_img', None)
         try:
             goods = Goods.objects.get(goods_id=goods_id)
@@ -1758,7 +1758,7 @@ class ClearAccount(object):
         history_key = ':'.join(['cleardone', str(store_id)])
         _info = {
             'clear_time': datetime.now(),
-            'clear_user': str(self.user),
+            'clear_user': str(self.confirm_user),
             'clear_type': pay_from,
             'store_id': store_id,
             'begin_date': data['info'][0]['order_info']['create_time'],
