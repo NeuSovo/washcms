@@ -795,8 +795,12 @@ class PeiSongManager(object):
     def __init__(self, user, postdata):
         self.user = user
         self.data = postdata
-        self.ps_user = UserManager.get_user_area(user)
-        self.area = self.ps_user.area
+        try:
+            self.ps_user = UserManager.get_user_area(user)
+            self.area = self.ps_user.area
+        except:
+            self.ps_user = None
+            self.area = None
 
     @staticmethod
     def get_peisong_order_info(order):
@@ -817,6 +821,9 @@ class PeiSongManager(object):
         [TODO] Redis
 
         """
+
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         result = {}
         info = list()
 
@@ -832,7 +839,26 @@ class PeiSongManager(object):
 
         return result
 
+    def get_done_peisong(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
+        result = {}
+        info = list()
+
+        order_pool = Order.objects.filter(area=self.area, order_type=0)
+        order_pool = Order.objects.filter(area=self.area, pay_typ=1, order_type=1) | order_pool # 月结
+
+        for i in order_pool:
+            info.append(i.info())
+
+        result['message'] = 'ok'
+        result['info'] = info
+
+        return result
+
     def set_receive_peisong(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         order_id = int(self.data.get('order_id', 0))
 
         try:
@@ -847,6 +873,8 @@ class PeiSongManager(object):
         return {'message': 'ok'}
 
     def get_recover_peisong(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         info = list()
         recover_order_pool = RecoverOrder.objects.filter(
             area=self.area, order_type=1)
@@ -858,6 +886,8 @@ class PeiSongManager(object):
                 'info': info}
 
     def set_recover_peisong(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         try:
             order_id = int(self.data['order_id'])
         except Exception:
@@ -968,6 +998,8 @@ class PeiSongManager(object):
         return info
 
     def day_order_report(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         today = datetime.now()
         day = self.data.get('day', today.day)
 
@@ -996,6 +1028,8 @@ class PeiSongManager(object):
         return result
 
     def month_order_report(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         today = datetime.now()
         month = self.data.get('month', today.month)
 
@@ -1026,6 +1060,8 @@ class PeiSongManager(object):
         return result
 
     def get_pay_peisong(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         result = {}
         info = list()
         order_pool = Order.objects.filter(
@@ -1047,6 +1083,8 @@ class PeiSongManager(object):
         return result
 
     def set_pay_peisong(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         order_id = int(self.data.get('order_id', 0))
         pay_from = int(self.data.get('pay_from', None))
 
@@ -1063,6 +1101,8 @@ class PeiSongManager(object):
         return {'message': 'ok'}
 
     def get_car_stock(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         result = list()
         old_info = list()
         goods_pool = PeisongCarStock.objects.filter(wk=self.ps_user)
@@ -1079,6 +1119,8 @@ class PeiSongManager(object):
                 'old_info': old_info}
 
     def get_ps_stock(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         # pass
         order_pool = Order.objects.filter(area=self.area, order_type=2)
         result = list()
@@ -1099,6 +1141,8 @@ class PeiSongManager(object):
                 'info': result}
 
     def new_pick(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         order_id = OrderManager.gen_order_id(2)
         pick_user = PeisongProfile.objects.get(wk=self.user)
 
@@ -1140,6 +1184,8 @@ class PeiSongManager(object):
         return info
 
     def get_pick(self):
+        if self.ps_user == None or self.area == None:
+            return {'message': '用户身份错误'}
         info = list()
         index = self.data.get('index',0)
         pick_user = PeisongProfile.objects.get(wk=self.user)
