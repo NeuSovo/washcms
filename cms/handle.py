@@ -1803,12 +1803,14 @@ class ClearAccount(object):
         redis_report.delete(store_id)
         history_key = ':'.join(['cleardone', str(store_id)])
         _info = {
+            'total_price': str(data['total_price']),
             'clear_time': str(datetime.now()),
             'clear_user': str(self.confirm_user),
             'clear_type': pay_from,
             'store_id': store_id,
             'begin_date': data['info'][0]['order_info']['create_time'],
-            'end_date': data['info'][-1]['order_info']['create_time']
+            'end_date': data['info'][-1]['order_info']['create_time'],
+            'store_info': store.info()
         }
         info['info'] = _info
         redis_report.set(history_key, _info, ex=604800)
