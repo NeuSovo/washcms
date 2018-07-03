@@ -1757,7 +1757,7 @@ class ClearAccount(object):
         redis_report.delete(store_id)
         history_key = ':'.join(['cleardone', str(store_id)])
         _info = {
-            'clear_time': datetime.now(),
+            'clear_time': str(datetime.now()),
             'clear_user': str(self.confirm_user),
             'clear_type': pay_from,
             'store_id': store_id,
@@ -1775,7 +1775,7 @@ class ClearAccount(object):
         info = list()
         keys_pool = redis_report.keys('cleardone:*')
         for i in keys_pool:
-            info.append(i.info())
+            info.append(eval(redis_report.get(i)))
         res['message'] = 'ok'
         res['info'] = info
 
