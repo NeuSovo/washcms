@@ -1771,8 +1771,8 @@ class ClearAccount(object):
         result = {'message': 'ok',
                   'total_price': str(total_price),
                   'info': info}
-
-        redis_report.set(store_id, result, ex=86400)
+        if info:
+            redis_report.set(store_id, result, ex=86400)
         return result
 
     def confirm_clear(self):
