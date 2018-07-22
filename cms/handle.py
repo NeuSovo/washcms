@@ -985,7 +985,7 @@ class PeiSongManager(object):
             recover_goods_sum.append({'goods_id': i,
                               'goods_name': goods.goods_name,
                               'goods_spec': goods.goods_spec,
-                              'goods_count': goods_sum_tmp[i]})
+                              'goods_count': recover_goods_sum_tmp[i]})
         info = {
             'message': 'ok',
             'pick_order_sum': len(pick_pool)-recover_order_sum,

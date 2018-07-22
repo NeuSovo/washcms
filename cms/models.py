@@ -542,8 +542,6 @@ class PickOrderDetail(models.Model):
         verbose_name = "PickOrderDetail"
         verbose_name_plural = "PickOrderDetails"
 
-    def __str__(self):
-        pass
 
     order_id = models.BigIntegerField(null=True)
     goods = models.ForeignKey(
